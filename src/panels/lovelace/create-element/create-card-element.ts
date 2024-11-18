@@ -74,6 +74,7 @@ const LAZY_LOAD_TYPES = {
   iframe: () => import("../cards/hui-iframe-card"),
   logbook: () => import("../cards/hui-logbook-card"),
   map: () => import("../cards/hui-map-card"),
+  osm: () => import("../cards/hui-osm-card"),
   markdown: () => import("../cards/hui-markdown-card"),
   "media-control": () => import("../cards/hui-media-control-card"),
   "picture-elements": () => import("../cards/hui-picture-elements-card"),
