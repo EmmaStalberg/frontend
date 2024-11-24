@@ -1,11 +1,14 @@
-import type { PropertyValues } from "lit";
+import { mdiPencil } from "@mdi/js";
+import type { CSSResultGroup, PropertyValues } from "lit";
 import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
+import { navigate } from "../../common/navigate";
 import "../../components/ha-card";
 import "../../components/ha-icon-button";
 import "../../components/ha-menu-button";
 import "../../components/ha-top-app-bar-fixed";
-import "../../components/map/ha-map";
+import "../../components/map/ha-osm";
+import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
 @customElement("open-street-map-panel")
@@ -27,39 +30,44 @@ class OpenStreetMapPanel extends LitElement {
           .narrow=${this.narrow}
         ></ha-menu-button>
         <div slot="title">OpenStreetMap Panel</div>
-        <ha-card elevation="2">
-          <p>There are ${Object.keys(this.hass.states).length} entities.</p>
-          <p>Testing out the OpenStreetMap.</p>
-          <p>The screen is${this.narrow ? "" : " not"} narrow.</p>
-          <div>Configured panel config:</div>
-          <pre>${JSON.stringify(this.panel?.config, undefined, 2)}</pre>
-          <div>Current route:</div>
-          <pre>${JSON.stringify(this.route, undefined, 2)}</pre>
-        </ha-card>
+        ${!__DEMO__ && this.hass.user?.is_admin
+          ? html`<ha-icon-button
+              slot="actionItems"
+              .label=${this.hass!.localize("ui.panel.map.edit_zones")}
+              .path=${mdiPencil}
+              @click=${this._openZonesEditor}
+            ></ha-icon-button>`
+          : ""}
+        <ha-osm
+          .hass=${this.hass}
+          autoFit
+          interactiveZones
+        ></ha-osm>
       </ha-top-app-bar-fixed>
     `;
   }
 
-  public willUpdate(changedProps: PropertyValues) {
-    super.willUpdate(changedProps);
+  private _openZonesEditor() {
+    navigate("/config/zone?historyBack=1");
   }
 
-  static get styles() {
-    return css`
-      :host {
-        background-color: #fafafa;
-        padding: 16px;
-        display: block;
+  public willUpdate(changedProps: PropertyValues) {
+    super.willUpdate(changedProps);
+    if (!changedProps.has("hass")) {
+      return;
+    }
+    const _oldHass = changedProps.get("hass") as HomeAssistant | undefined;
+  }
+
+  static get styles(): CSSResultGroup {
+    return [
+      haStyle, 
+      css`
+      ha-osm {
+        height: calc(100vh - var(--header-height));
       }
-      wired-card {
-        background-color: white;
-        padding: 16px;
-        display: block;
-        font-size: 18px;
-        max-width: 600px;
-        margin: 0 auto;
-      }
-    `;
+      `,
+    ];
   }
 }
 

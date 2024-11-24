@@ -17,6 +17,10 @@ class HaPanelMap extends LitElement {
 
   @property({ type: Boolean }) public narrow = false;
 
+  @property({ type: Object }) public route?: object;
+
+  @property({ type: Object }) public panel?: { config: object };
+
   private _entities: string[] = [];
 
   protected render() {
