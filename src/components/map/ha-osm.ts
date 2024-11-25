@@ -4,11 +4,11 @@ import type {
   CircleMarker,
   LatLngExpression,
   LatLngTuple,
-  Layer,
   Map,
   Marker,
   Polyline,
 } from "leaflet";
+import { TileLayer } from "leaflet";
 import type { CSSResultGroup, PropertyValues } from "lit";
 import { ReactiveElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators";
@@ -18,7 +18,14 @@ import {
   formatTimeWithSeconds,
 } from "../../common/datetime/format_time";
 import type { LeafletModuleType } from "../../common/dom/setup-leaflet-map";
-import { setupLeafletMap } from "../../common/dom/setup-leaflet-map";
+import {
+  setupLeafletMap,
+  createCyclOSMTileLayer,
+  createTileLayer,
+  createCycleMapTileLayer,
+  createTransportMapTileLayer,
+  createHotMapTileLayer,
+} from "../../common/dom/setup-leaflet-map";
 import { computeStateDomain } from "../../common/entity/compute_state_domain";
 import { computeStateName } from "../../common/entity/compute_state_name";
 import type { HomeAssistant, ThemeMode } from "../../types";
@@ -72,7 +79,7 @@ export class HaOSM extends ReactiveElement {
   @property({ attribute: "theme-mode", type: String })
   public themeMode: ThemeMode = "auto";
 
-  @property({ type: Number }) public zoom = 14;
+  @property({ type: Number }) public zoom = 13;
 
   @state() private _loaded = false;
 
@@ -82,7 +89,7 @@ export class HaOSM extends ReactiveElement {
 
   private Leaflet?: LeafletModuleType;
 
-  private tileLayer?: TileLayer;
+  // private tileLayer?: TileLayer;
 
   private _resizeObserver?: ResizeObserver;
 
@@ -97,16 +104,16 @@ export class HaOSM extends ReactiveElement {
   private _mapPaths: Array<Polyline | CircleMarker> = [];
 
   //EMMA
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-  }
+  // constructor() {
+  //   super();
+  //   this.attachShadow({ mode: "open" });
+  // }
 
   public connectedCallback(): void {
     super.connectedCallback();
-    this._attachObserver();    
     // this._initMapAndSearch(); EMMA
     this._loadMap();
+    this._attachObserver();    
   }
 
   public disconnectedCallback(): void {
@@ -127,54 +134,54 @@ export class HaOSM extends ReactiveElement {
   protected update(changedProps: PropertyValues) {
     super.update(changedProps);
 
-    if (!this._loaded) {
-      return;
-    }
-    // let autoFitRequired = false;
-    const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
+    // if (!this._loaded) {
+    //   return;
+    // }
+    // // let autoFitRequired = false;
+    // const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
 
-    if (changedProps.has("_loaded") || changedProps.has("entities")) {
-      this._drawEntities();
-      // autoFitRequired = true;
-    } else if (this._loaded && oldHass && this.entities) {
-      // Check if any state has changed
-      for (const entity of this.entities) {
-        if (
-          oldHass.states[getEntityId(entity)] !==
-          this.hass!.states[getEntityId(entity)]
-        ) {
-          this._drawEntities();
-          // autoFitRequired = true;
-          break;
-        }
-      }
-    }
+    // if (changedProps.has("_loaded") || changedProps.has("entities")) {
+    //   this._drawEntities();
+    //   // autoFitRequired = true;
+    // } else if (this._loaded && oldHass && this.entities) {
+    //   // Check if any state has changed
+    //   for (const entity of this.entities) {
+    //     if (
+    //       oldHass.states[getEntityId(entity)] !==
+    //       this.hass!.states[getEntityId(entity)]
+    //     ) {
+    //       this._drawEntities();
+    //       // autoFitRequired = true;
+    //       break;
+    //     }
+    //   }
+    // }
 
-    if (changedProps.has("_loaded") || changedProps.has("paths")) {
-      this._drawPaths();
-    }
+    // if (changedProps.has("_loaded") || changedProps.has("paths")) {
+    //   this._drawPaths();
+    // }
 
-    if (changedProps.has("_loaded") || changedProps.has("layers")) {
-      this._drawLayers(changedProps.get("layers") as Layer[] | undefined);
-      autoFitRequired = true;
-    }
+    // if (changedProps.has("_loaded") || changedProps.has("layers")) {
+    //   this._drawLayers(changedProps.get("layers") as Layer[] | undefined);
+    //   autoFitRequired = true;
+    // }
 
-    if (changedProps.has("_loaded") || (this.autoFit && autoFitRequired)) {
-      this.fitMap();
-    }
+    // if (changedProps.has("_loaded") || (this.autoFit && autoFitRequired)) {
+    //   this.fitMap();
+    // }
 
-    if (changedProps.has("zoom")) {
-      this.leafletMap!.setZoom(this.zoom);
-    }
+    // if (changedProps.has("zoom")) {
+    //   this.leafletMap!.setZoom(this.zoom);
+    // }
 
-    if (
-      !changedProps.has("themeMode") &&
-      (!changedProps.has("hass") ||
-        (oldHass && oldHass.themes?.darkMode === this.hass.themes?.darkMode))
-    ) {
-      return;
-    }
-    this._updateMapStyle();
+    // if (
+    //   !changedProps.has("themeMode") &&
+    //   (!changedProps.has("hass") ||
+    //     (oldHass && oldHass.themes?.darkMode === this.hass.themes?.darkMode))
+    // ) {
+    //   return;
+    // }
+    // this._updateMapStyle();
   }
 
   private get _darkMode() {
