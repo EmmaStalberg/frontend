@@ -21,7 +21,7 @@ export const setupLeafletMap = async (
   style.setAttribute("href", "/static/images/leaflet/leaflet.css");
   style.setAttribute("rel", "stylesheet");
   mapElement.parentNode.appendChild(style);
-  map.setView([52.3731339, 4.8903147], 13);
+  map.setView([57.7072326, 11.9670171], 13);
 
   const tileLayer = createTileLayer(Leaflet).addTo(map);
 
@@ -40,15 +40,10 @@ export const replaceTileLayer = (
 };
 
 const createTileLayer = (leaflet: LeafletModuleType): TileLayer =>
-  leaflet.tileLayer(
-    `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${
-      leaflet.Browser.retina ? "@2x.png" : ".png"
-    }`,
-    {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: "abcd",
-      minZoom: 0,
-      maxZoom: 20,
-    }
-  );
+  leaflet.tileLayer(`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    subdomains: "abcd",
+    minZoom: 0,
+    maxZoom: 20,
+  });
