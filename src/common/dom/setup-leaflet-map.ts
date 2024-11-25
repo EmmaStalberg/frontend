@@ -27,6 +27,12 @@ export const setupLeafletMap = async (
     map.setView(e.latlng);
     Leaflet.marker(e.latlng).addTo(map);
   });
+  // map.setView([57.7072326, 11.9670171], 13);
+  map.locate({ setView: true, maxZoom: 13 });
+  map.on("locationfound", (e: L.LocationEvent) => {
+    map.setView(e.latlng);
+    Leaflet.marker(e.latlng).addTo(map);
+  });
 
   const tileLayer = createTileLayer(Leaflet).addTo(map);
 

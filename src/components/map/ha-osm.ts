@@ -66,7 +66,7 @@ export class HaOSM extends ReactiveElement {
 
   @property({ attribute: false }) public paths?: HaMapPaths[];
 
-  @property({ attribute: false }) public layers?: Layer[];
+  @property({ attribute: false }) public layer?: TileLayer;
 
   @property({ type: Boolean }) public autoFit = false;
 
@@ -88,8 +88,6 @@ export class HaOSM extends ReactiveElement {
   public leafletMap?: Map;
 
   private Leaflet?: LeafletModuleType;
-
-  // private tileLayer?: TileLayer;
 
   private _resizeObserver?: ResizeObserver;
 
@@ -221,8 +219,7 @@ export class HaOSM extends ReactiveElement {
     }
     this._loading = true;
     try {
-      [this.leafletMap, this.Leaflet, this.tileLayer] =
-        await setupLeafletMap(map);
+      [this.leafletMap, this.Leaflet, this.layer] = await setupLeafletMap(map);
       this._loaded = true;
     } finally {
       this._loading = false;
@@ -234,18 +231,19 @@ export class HaOSM extends ReactiveElement {
       return;
     }
 
-    if (
-      !this._mapFocusItems.length &&
-      !this._mapFocusZones.length &&
-      !this.layers?.length
-    ) {
-      this.leafletMap.setView(
-        new this.Leaflet.LatLng(
-          this.hass.config.latitude,
-          this.hass.config.longitude
-        ),
-        options?.zoom || this.zoom
-      );
+    if (!this._mapFocusItems.length && !this._mapFocusZones.length) {
+      const map = this.leafletMap;
+      map.locate({ setView: true, maxZoom: 13 });
+      map.on("locationfound", (e: L.LocationEvent) => {
+        map.setView(e.latlng);
+      });
+      // this.leafletMap.setView(
+      //   new this.Leaflet.LatLng(
+      //     this.hass.config.latitude,
+      //     this.hass.config.longitude
+      //   ),
+      //   options?.zoom || this.zoom
+      // );
       return;
     }
 
@@ -259,11 +257,11 @@ export class HaOSM extends ReactiveElement {
       bounds.extend("getBounds" in zone ? zone.getBounds() : zone.getLatLng());
     });
 
-    this.layers?.forEach((layer: any) => {
-      bounds.extend(
-        "getBounds" in layer ? layer.getBounds() : layer.getLatLng()
-      );
-    });
+    // this.layer?.forEach((layer: any) => {
+    //   bounds.extend(
+    //     "getBounds" in layer ? layer.getBounds() : layer.getLatLng()
+    //   );
+    // });
 
     bounds = bounds.pad(options?.pad ?? 0.5);
 
@@ -283,17 +281,51 @@ export class HaOSM extends ReactiveElement {
     this.leafletMap.fitBounds(bounds, { maxZoom: options?.zoom || this.zoom });
   }
 
-  private _drawLayers(prevLayers: Layer[] | undefined): void {
-    if (prevLayers) {
-      prevLayers.forEach((layer) => layer.remove());
-    }
-    if (!this.layers) {
-      return;
-    }
+  public changeToStandardLayer(): void {
     const map = this.leafletMap!;
-    this.layers.forEach((layer) => {
-      map.addLayer(layer);
+    const leaflet = this.Leaflet!;
+    map.eachLayer((layer) => {
+      if (layer instanceof TileLayer) {
+        map.removeLayer(layer);
+      }
     });
+    this.layer = createTileLayer(leaflet)?.addTo(map);
+  }
+
+  public changeToCyclOSMLayer(): void {
+    const map = this.leafletMap!;
+    const leaflet = this.Leaflet!;
+
+    const cyclOSMTileLayer = createCyclOSMTileLayer(leaflet);
+
+    this.layer = cyclOSMTileLayer.addTo(map);
+  }
+
+  public changeToCycleMapLayer(): void {
+    const map = this.leafletMap!;
+    const leaflet = this.Leaflet!;
+
+    const cyclOSMTileLayer = createCycleMapTileLayer(leaflet);
+
+    this.layer = cyclOSMTileLayer.addTo(map);
+  }
+
+  public changeToTransportMapLayer(): void {
+    const map = this.leafletMap!;
+    const leaflet = this.Leaflet!;
+
+    const cyclOSMTileLayer = createTransportMapTileLayer(leaflet);
+
+    this.layer = cyclOSMTileLayer.addTo(map);
+  }
+
+  public changeToHotMapLayer(): void {
+    const map = this.leafletMap!;
+    const leaflet = this.Leaflet!;
+
+    const cyclOSMTileLayer = createHotMapTileLayer(leaflet);
+
+    this.layer = cyclOSMTileLayer.addTo(map);
   }
 
   private _computePathTooltip(path: HaMapPaths, point: HaMapPathPoint): string {
