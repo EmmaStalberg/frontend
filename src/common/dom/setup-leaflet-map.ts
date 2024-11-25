@@ -44,11 +44,56 @@ export const replaceTileLayer = (
   return tileLayer;
 };
 
-const createTileLayer = (leaflet: LeafletModuleType): TileLayer =>
+export const createTileLayer = (leaflet: LeafletModuleType): TileLayer =>
   leaflet.tileLayer(`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     subdomains: "abcd",
+    minZoom: 0,
+    maxZoom: 20,
+  });
+
+export const createCyclOSMTileLayer = (leaflet: LeafletModuleType): TileLayer =>
+  leaflet.tileLayer(
+    `https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png`,
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>  contributors, <a href="https://cyclosm.org/">CyclOSM</a>',
+      minZoom: 0,
+      maxZoom: 20,
+    }
+  );
+
+export const createCycleMapTileLayer = (
+  leaflet: LeafletModuleType
+): TileLayer =>
+  leaflet.tileLayer(
+    `https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=0a82ca6f08ab4253a9cc6cba516a620a`,
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>  contributors, <a href="https://www.opencyclemap.org/">OpenCycleMap</a>',
+      minZoom: 0,
+      maxZoom: 20,
+    }
+  );
+
+export const createTransportMapTileLayer = (
+  leaflet: LeafletModuleType
+): TileLayer =>
+  leaflet.tileLayer(
+    `https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=0a82ca6f08ab4253a9cc6cba516a620a`,
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>  contributors, <a href="https://www.opencyclemap.org/">OpenCycleMap</a>',
+      minZoom: 0,
+      maxZoom: 20,
+    }
+  );
+
+export const createHotMapTileLayer = (leaflet: LeafletModuleType): TileLayer =>
+  leaflet.tileLayer(`https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png`, {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     minZoom: 0,
     maxZoom: 20,
   });
