@@ -76,6 +76,8 @@ export class HaOSM extends ReactiveElement {
 
   @state() private _loaded = false;
 
+  @state() private searchResults: any[] = []; // Store search results EMMA 
+
   public leafletMap?: Map;
 
   private Leaflet?: LeafletModuleType;
@@ -407,7 +409,8 @@ export class HaOSM extends ReactiveElement {
       <div id="map-container">
         <search-input-outlined
           id="search-input"
-          placeholder="Search for an entity..."
+          placeholder="Search for an adress or place..."
+          @value-changed=${this._onSearchInputChanged}
         ></search-input-outlined>
         <div id="map"></div>
       </div>
@@ -586,8 +589,22 @@ export class HaOSM extends ReactiveElement {
   }
 
   //EMMA
-  _onSearchInputChanged(event) {
-    const _searchTerm = event.detail.value.toLowerCase();
+  private async _onSearchInputChanged(event: CustomEvent) {
+    const searchterm = event.detail.value.toLowerCase().trim();
+    if (!searchterm) return;
+
+    // call service from core 
+    const result = await this.hass.callService("openstreetmap", "search", {
+      searchterm,
+    });
+
+    if (result.error) {
+      console.error("Search error:", result.error);
+      return;
+    }
+
+    this.searchResults = result; // Store the search results
+    this._updateMapMarkers();
     // this._mapItems.forEach((marker) => {
     //   const markerLabel = marker.options.icon.options.html.toLowerCase();
     //   // if (markerLabel.includes(searchTerm)) {
@@ -596,6 +613,19 @@ export class HaOSM extends ReactiveElement {
     //   //   marker.setOpacity(0.3); // Hide marker
     //   // }
     // });
+  }
+
+  //EMMA
+  private _updateMapMarkers() {
+    const map = this.shadowRoot?.querySelector("#map");
+    if (!map) return;
+
+    // Clear existing markers (if any)
+    // Add new markers based on the search results
+    this.searchResults.forEach((result) => {
+      const marker = L.marker([result.lat, result.lon]);
+      marker.addTo(map);
+    });
   }
 
   static get styles(): CSSResultGroup {
@@ -624,6 +654,11 @@ export class HaOSM extends ReactiveElement {
         cursor: grabbing;
         cursor: -moz-grabbing;
         cursor: -webkit-grabbing;
+      }
+      //EMMA
+      #map-container {
+        position: relative;
+        height: 100%;
       }
       .leaflet-tile-pane {
         filter: var(--map-filter);
@@ -667,6 +702,7 @@ export class HaOSM extends ReactiveElement {
         box-shadow: none !important;
         text-align: center;
       }
+      //EMMA
       search-input-outlined {
         position: absolute;
         top: 10px;
