@@ -3,6 +3,7 @@ import {
   mdiLayersTriple,
   mdiShare,
   mdiNotePlusOutline,
+  mdiMapSearch
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
 import type { LatLngTuple } from "leaflet";
@@ -176,6 +177,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     return html`
       <ha-card id="card" .header=${this._config.title}>
         <div id="root">
+          <search-input-outlined
+            .hass=${this.hass}
+            @value-changed=${this._searchOnMap}
+            .label=${this.hass.localize(
+              "ui.panel.lovelace.editor.edit_card.search_cards"
+            )}
+          ></search-input-outlined>
           <ha-osm
             .hass=${this.hass}
             .entities=${this._mapEntities}
@@ -219,6 +227,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               .path=${mdiNotePlusOutline}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
               @click=${this._addNode}
+            ></ha-icon-button-toggle>
+            <ha-icon-button-toggle
+              .label=${this.hass.localize(
+                `ui.panel.lovelace.cards.map.search_on_map`
+              )}
+              .path=${mdiMapSearch}
+              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
+              @click=${this._searchOnMap}
             ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
@@ -366,6 +382,10 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _addNode() {
     // TODO
+  }
+
+  private async _searchOnMap(): Promise<void> {
+    // TODO 
   }
 
   private async _changeLayer(): Promise<void> {
