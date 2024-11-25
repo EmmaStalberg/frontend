@@ -611,6 +611,17 @@ export class HaOSM extends ReactiveElement {
           })
         );
       }
+
+      //EMMA
+      const { name } = entity; // how to get this properly?
+      if (!latitude || !longitude) continue;
+  
+      const markerSearch = Leaflet.marker([latitude, longitude], {
+        title: name,
+      });
+  
+      this._mapItems.push(markerSearch);
+      map.addLayer(markerSearch);
     }
 
     this._mapItems.forEach((marker) => map.addLayer(marker));
