@@ -210,7 +210,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               )}
               .path=${mdiShare}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-              @click=${this._fitMap}
+              @click=${this._shareLocation}
             ></ha-icon-button-toggle>
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -218,7 +218,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               )}
               .path=${mdiNotePlusOutline}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-              @click=${this._fitMap}
+              @click=${this._addNode}
             ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
@@ -358,6 +358,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _fitMap() {
     this._map?.fitMap();
+  }
+
+  private _shareLocation() {
+    // TODO
+  }
+
+  private _addNode() {
+    // TODO
   }
 
   private async _changeLayer(): Promise<void> {
