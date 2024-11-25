@@ -89,6 +89,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
+  @state() private searchResults: any[] = []; // Store search results EMMA 
+
   public setConfig(config: MapCardConfig): void {
     if (!config) {
       throw new Error("Error in card configuration.");
@@ -177,13 +179,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     return html`
       <ha-card id="card" .header=${this._config.title}>
         <div id="root">
-          <search-input-outlined
-            .hass=${this.hass}
-            @value-changed=${this._searchOnMap}
-            .label=${this.hass.localize(
-              "ui.panel.lovelace.editor.edit_card.search_cards"
-            )}
-          ></search-input-outlined>
           <ha-osm
             .hass=${this.hass}
             .entities=${this._mapEntities}
@@ -195,6 +190,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             interactiveZones
             renderPassive
           ></ha-osm>
+          <search-input-outlined
+            id="search-bar"
+            .hass=${this.hass}
+            @value-changed=${this._handleSearch}
+            .label=${this.hass.localize(
+              "ui.panel.lovelace.editor.edit_card.search_cards"
+            )}
+          ></search-input-outlined>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -234,7 +237,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               )}
               .path=${mdiMapSearch}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-              @click=${this._searchOnMap}
+              @click=${this._handleSearch}
             ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
@@ -384,8 +387,37 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // TODO
   }
 
-  private async _searchOnMap(): Promise<void> {
-    // TODO 
+  private async _handleSearch(event: CustomEvent): Promise<void> {
+    const searchterm = event.detail.value.toLowerCase().trim();
+    if (!searchterm) return;
+
+    // call service from core 
+    const results = await this.hass.callService("openstreetmap", "search", {
+      searchterm,
+    });
+
+    if (results.error) {
+      this._error = { code: "search_error", message: results.error };
+      return;
+    }
+
+    this._mapEntities = results.map((result) => ({
+      entity_id: result.id,
+      color: this._getColor(result.id),
+      name: result.display_name,
+      focus: true,
+    }));
+
+    // this.searchResults = result; // Store the search results
+    // this._updateMapMarkers();
+    // this._mapItems.forEach((marker) => {
+    //   const markerLabel = marker.options.icon.options.html.toLowerCase();
+    //   // if (markerLabel.includes(searchTerm)) {
+    //   //   marker.setOpacity(1); // Show marker
+    //   // } else {
+    //   //   marker.setOpacity(0.3); // Hide marker
+    //   // }
+    // });
   }
 
   private async _changeLayer(): Promise<void> {
