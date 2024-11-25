@@ -443,18 +443,18 @@ export class HaOSM extends ReactiveElement {
   }
 
   // EMMA 
-  render() {
-    return html`
-      <div id="map-container">
-        <search-input-outlined
-          id="search-input"
-          placeholder="Search for an adress or place..."
-          @value-changed=${this._onSearchInputChanged}
-        ></search-input-outlined>
-        <div id="map"></div>
-      </div>
-    `;
-  }
+  // render() {
+  //   return html`
+  //     <div id="map-container">
+  //       <search-input-outlined
+  //         id="search-input"
+  //         placeholder="Search for an adress or place..."
+  //         @value-changed=${this._onSearchInputChanged}
+  //       ></search-input-outlined>
+  //       <div id="map"></div>
+  //     </div>
+  //   `;
+  // }
 
   private _drawEntities(): void {
     const hass = this.hass;
@@ -628,44 +628,44 @@ export class HaOSM extends ReactiveElement {
   }
 
   //EMMA
-  private async _onSearchInputChanged(event: CustomEvent) {
-    const searchterm = event.detail.value.toLowerCase().trim();
-    if (!searchterm) return;
+  // private async _onSearchInputChanged(event: CustomEvent) {
+  //   const searchterm = event.detail.value.toLowerCase().trim();
+  //   if (!searchterm) return;
 
-    // call service from core 
-    const result = await this.hass.callService("openstreetmap", "search", {
-      searchterm,
-    });
+  //   // call service from core 
+  //   const result = await this.hass.callService("openstreetmap", "search", {
+  //     searchterm,
+  //   });
 
-    if (result.error) {
-      console.error("Search error:", result.error);
-      return;
-    }
+  //   if (result.error) {
+  //     console.error("Search error:", result.error);
+  //     return;
+  //   }
 
-    this.searchResults = result; // Store the search results
-    this._updateMapMarkers();
-    // this._mapItems.forEach((marker) => {
-    //   const markerLabel = marker.options.icon.options.html.toLowerCase();
-    //   // if (markerLabel.includes(searchTerm)) {
-    //   //   marker.setOpacity(1); // Show marker
-    //   // } else {
-    //   //   marker.setOpacity(0.3); // Hide marker
-    //   // }
-    // });
-  }
+  //   this.searchResults = result; // Store the search results
+  //   this._updateMapMarkers();
+  //   // this._mapItems.forEach((marker) => {
+  //   //   const markerLabel = marker.options.icon.options.html.toLowerCase();
+  //   //   // if (markerLabel.includes(searchTerm)) {
+  //   //   //   marker.setOpacity(1); // Show marker
+  //   //   // } else {
+  //   //   //   marker.setOpacity(0.3); // Hide marker
+  //   //   // }
+  //   // });
+  // }
 
-  //EMMA
-  private _updateMapMarkers() {
-    const map = this.shadowRoot?.querySelector("#map");
-    if (!map) return;
+  // //EMMA
+  // private _updateMapMarkers() {
+  //   const map = this.shadowRoot?.querySelector("#map");
+  //   if (!map) return;
 
-    // Clear existing markers (if any)
-    // Add new markers based on the search results
-    this.searchResults.forEach((result) => {
-      const marker = L.marker([result.lat, result.lon]);
-      marker.addTo(map);
-    });
-  }
+  //   // Clear existing markers (if any)
+  //   // Add new markers based on the search results
+  //   this.searchResults.forEach((result) => {
+  //     const marker = L.marker([result.lat, result.lon]);
+  //     marker.addTo(map);
+  //   });
+  // }
 
   static get styles(): CSSResultGroup {
     return css`
@@ -694,11 +694,11 @@ export class HaOSM extends ReactiveElement {
         cursor: -moz-grabbing;
         cursor: -webkit-grabbing;
       }
-      //EMMA
+      /* //EMMA
       #map-container {
         position: relative;
         height: 100%;
-      }
+      } */
       .leaflet-tile-pane {
         filter: var(--map-filter);
       }
