@@ -21,6 +21,8 @@ class OpenStreetMapPanel extends LitElement {
 
   @property({ type: Object }) public panel?: { config: object };
 
+  @state() private _filter?: string; //EMMA
+
   protected render() {
 
     return html`
@@ -46,12 +48,26 @@ class OpenStreetMapPanel extends LitElement {
         ></ha-osm>
         <search-input-outlined
           .hass=${this.hass}
-          .filter=${this.filter}
+          .filter=${this._filter}
           @value-changed=${this._handleSearchChange}
         >
         </search-input-outlined>
       </ha-top-app-bar-fixed>
     `;
+  }
+
+  // eslint-disable-next-line spaced-comment
+  //EMMA - also check hui osm card
+  private async _handleSearch(event: CustomEvent): Promise<void> {
+    const searchterm = event.detail.value.toLowerCase().trim();
+    this._filter = searchterm;
+    if (!searchterm) return;
+
+    // call service from core 
+    // eslint-disable-next-line unused-imports/no-unused-vars
+    const results = await this.hass.callService("openstreetmap", "search", {
+      searchterm,
+    });
   }
 
   private _openZonesEditor() {
