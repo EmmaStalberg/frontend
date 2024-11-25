@@ -1,4 +1,9 @@
-import { mdiImageFilterCenterFocus } from "@mdi/js";
+import {
+  mdiImageFilterCenterFocus,
+  mdiLayersTriple,
+  mdiShare,
+  mdiNotePlusOutline,
+} from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
 import type { LatLngTuple } from "leaflet";
 import type { CSSResultGroup, PropertyValues } from "lit";
@@ -16,7 +21,7 @@ import "../../../components/ha-card";
 import "../../../components/ha-icon-button";
 import "../../../components/map/ha-osm";
 import type {
-  HaMap,
+  HaOSM,
   HaMapEntity,
   HaMapPathPoint,
   HaMapPaths,
@@ -33,6 +38,16 @@ import { processConfigEntities } from "../common/process-config-entities";
 import type { EntityConfig } from "../entity-rows/types";
 import type { LovelaceCard, LovelaceGridOptions } from "../types";
 import type { MapCardConfig } from "./types";
+import "../../../components/ha-icon-button-group";
+import "../../../components/ha-icon-button-toggle";
+import { showMapLayerDialog } from "../../../dialogs/map-layer/show-dialog-map-layer";
+import {
+  CYCLEMAP,
+  CYCLOSM,
+  HUMANITARIAN,
+  STANDARD,
+  TRANSPORTMAP,
+} from "../../../data/map_layer";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -59,7 +74,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private _config?: MapCardConfig;
 
   @query("ha-osm")
-  private _map?: HaMap;
+  private _map?: HaOSM;
 
   private _configEntities?: MapEntityConfig[];
 
@@ -134,7 +149,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       includeDomains
     );
 
-    return { type: "osm", entities: foundEntities, theme_mode: "auto" };
+    return { type: "map", entities: foundEntities, theme_mode: "auto" };
   }
 
   protected render() {
@@ -172,15 +187,42 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             interactiveZones
             renderPassive
           ></ha-osm>
-          <ha-icon-button
-            .label=${this.hass!.localize(
-              "ui.panel.lovelace.cards.map.reset_focus"
-            )}
-            .path=${mdiImageFilterCenterFocus}
-            style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-            @click=${this._fitMap}
-            tabindex="0"
-          ></ha-icon-button>
+          <ha-icon-button-group tabindex="0">
+            <ha-icon-button-toggle
+              .label=${this.hass.localize(
+                `ui.panel.lovelace.cards.map.reset_focus`
+              )}
+              .path=${mdiImageFilterCenterFocus}
+              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
+              @click=${this._fitMap}
+            ></ha-icon-button-toggle>
+            <ha-icon-button-toggle
+              .label=${this.hass.localize(
+                `ui.panel.lovelace.cards.map.change_layer`
+              )}
+              .path=${mdiLayersTriple}
+              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
+              @click=${this._changeLayer}
+            ></ha-icon-button-toggle>
+            <ha-icon-button-toggle
+              .label=${this.hass.localize(
+                `ui.panel.lovelace.cards.map.share_location`
+              )}
+              .path=${mdiShare}
+              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
+              @click=${this._fitMap}
+            ></ha-icon-button-toggle>
+            <ha-icon-button-toggle
+              .label=${this.hass.localize(
+                `ui.panel.lovelace.cards.map.add_a_note`
+              )}
+              .path=${mdiNotePlusOutline}
+              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
+              @click=${this._fitMap}
+            ></ha-icon-button-toggle>
+          </ha-icon-button-group>
+          <div slot="heading">Dialog Title</div>
+          <ha-dialog id="layer-dialog"> </ha-dialog>
         </div>
       </ha-card>
     `;
@@ -316,6 +358,26 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _fitMap() {
     this._map?.fitMap();
+  }
+
+  private async _changeLayer(): Promise<void> {
+    const response = await showMapLayerDialog(this, {});
+    if (response == null) return;
+    if (response === STANDARD) {
+      this._map?.changeToStandardLayer();
+    }
+    if (response === CYCLOSM) {
+      this._map?.changeToCyclOSMLayer();
+    }
+    if (response === CYCLEMAP) {
+      this._map?.changeToCycleMapLayer();
+    }
+    if (response === TRANSPORTMAP) {
+      this._map?.changeToTransportMapLayer();
+    }
+    if (response === HUMANITARIAN) {
+      this._map?.changeToHotMapLayer();
+    }
   }
 
   private _getColor(entityId: string): string {
@@ -461,10 +523,12 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
         background: inherit;
       }
 
-      ha-icon-button {
+      ha-icon-button-group {
         position: absolute;
         top: 75px;
         left: 3px;
+        display: flex;
+        flex-direction: column;
         outline: none;
       }
 
