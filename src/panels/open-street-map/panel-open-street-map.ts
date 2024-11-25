@@ -22,6 +22,7 @@ class OpenStreetMapPanel extends LitElement {
   @property({ type: Object }) public panel?: { config: object };
 
   protected render() {
+
     return html`
       <ha-top-app-bar-fixed>
         <ha-menu-button
@@ -43,6 +44,12 @@ class OpenStreetMapPanel extends LitElement {
           autoFit
           interactiveZones
         ></ha-osm>
+        <search-input-outlined
+          .hass=${this.hass}
+          .filter=${this.filter}
+          @value-changed=${this._handleSearchChange}
+        >
+        </search-input-outlined>
       </ha-top-app-bar-fixed>
     `;
   }
