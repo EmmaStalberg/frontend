@@ -393,14 +393,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   // EMMA
   private async _handleSearch(event: CustomEvent): Promise<void> {
     //  unsure which of these two below to use?
-    const response = await showMapSearchDialog(this, {});
     const searchterm = event.detail.value.toLowerCase().trim();
     this._filter = searchterm;
     if (!searchterm) return;
 
     // call service from core
     const results = await this.hass.callService("openstreetmap", "search", {
-      searchterm,
+      query: searchterm,
     });
 
     // // Handle errors in some way

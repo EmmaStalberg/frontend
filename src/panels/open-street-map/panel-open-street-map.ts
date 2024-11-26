@@ -52,6 +52,19 @@ class OpenStreetMapPanel extends LitElement {
       </ha-top-app-bar-fixed>
     `;
   }
+  // <search-input
+  //       .filter=${this.searchTerm}
+  //       @value-changed=${this._handleSearchChange}
+  //       label="Search for an address"
+  //       .hass=${this.hass}
+  //       autofocus
+  //     ></search-input>
+  //     <div class="results">
+  //       ${this.results.map(
+  //         (result) => html`<div class="result-item">${result.display_name}</div>`
+  //       )}
+  //     </div>
+  //   `;
 
   // eslint-disable-next-line spaced-comment
   //EMMA - also check hui osm card
