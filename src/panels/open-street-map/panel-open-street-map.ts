@@ -8,6 +8,7 @@ import "../../components/ha-icon-button";
 import "../../components/ha-menu-button";
 import "../../components/ha-top-app-bar-fixed";
 import "../../components/map/ha-osm";
+import "../../components/search-input";
 import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
@@ -41,14 +42,13 @@ class OpenStreetMapPanel extends LitElement {
             ></ha-icon-button>`
           : ""}
         <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm>
-        <search-input-outlined
+        <search-input
           slot="actionItems"
           .hass=${this.hass}
           .filter=${this._filter}
           @value-changed=${this._handleSearch}
-          style="background: white; border-radius: 5px; padding: 5px;"
         >
-        </search-input-outlined>
+        </search-input>
       </ha-top-app-bar-fixed>
     `;
   }
