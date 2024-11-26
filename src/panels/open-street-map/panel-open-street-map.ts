@@ -8,6 +8,7 @@ import "../../components/ha-icon-button";
 import "../../components/ha-menu-button";
 import "../../components/ha-top-app-bar-fixed";
 import "../../components/map/ha-osm";
+import "../../components/search-input";
 import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
@@ -21,7 +22,7 @@ class OpenStreetMapPanel extends LitElement {
 
   @property({ type: Object }) public panel?: { config: object };
 
-  @state() private _filter?: string; //EMMA
+  @state() private _filter?: string; // EMMA
 
   protected render() {
 
@@ -46,12 +47,14 @@ class OpenStreetMapPanel extends LitElement {
           autoFit
           interactiveZones
         ></ha-osm>
-        <search-input-outlined
+        <search-input
+          slot="actionItems"
           .hass=${this.hass}
           .filter=${this._filter}
-          @value-changed=${this._handleSearchChange}
+          @value-changed=${this._handleSearch}
+          style="background: white; border-radius: 5px; padding: 5px;"
         >
-        </search-input-outlined>
+        </search-input>
       </ha-top-app-bar-fixed>
     `;
   }
@@ -66,7 +69,7 @@ class OpenStreetMapPanel extends LitElement {
     // call service from core 
     // eslint-disable-next-line unused-imports/no-unused-vars
     const results = await this.hass.callService("openstreetmap", "search", {
-      searchterm,
+      query: searchterm,
     });
   }
 

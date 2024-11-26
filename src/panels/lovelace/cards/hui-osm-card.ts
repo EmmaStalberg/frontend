@@ -193,14 +193,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             interactiveZones
             renderPassive
           ></ha-osm>
-          <search-input-outlined
+          <search-input
             id="search-bar"
             .hass=${this.hass}
             @value-changed=${this._handleSearch}
             .label=${this.hass.localize(
               "ui.panel.lovelace.editor.edit_card.search_cards"
             )}
-          ></search-input-outlined>
+          ></search-input>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
