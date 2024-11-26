@@ -21,6 +21,7 @@ import "../../../components/ha-alert";
 import "../../../components/ha-card";
 import "../../../components/ha-icon-button";
 import "../../../components/map/ha-osm";
+import "../../../components/search-input-outlined";
 import type {
   HaOSM,
   HaMapEntity,
@@ -193,14 +194,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             interactiveZones
             renderPassive
           ></ha-osm>
-          <search-input
-            id="search-bar"
-            .hass=${this.hass}
-            @value-changed=${this._handleSearch}
-            .label=${this.hass.localize(
-              "ui.panel.lovelace.editor.edit_card.search_cards"
-            )}
-          ></search-input>
+          <search-input-outlined
+              id="search-bar"
+              .hass=${this.hass}
+              @value-changed=${this._handleSearch}
+              .label=${this.hass.localize(
+                "ui.panel.lovelace.editor.edit_card.search_cards"
+              )}
+            ></search-input-outlined>  
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(

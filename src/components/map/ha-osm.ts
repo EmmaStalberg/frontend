@@ -31,7 +31,7 @@ import { computeStateName } from "../../common/entity/compute_state_name";
 import type { HomeAssistant, ThemeMode } from "../../types";
 import { isTouch } from "../../util/is_touch";
 import "../ha-icon-button";
-import "../search-input-outlined"
+import "../search-input"
 import "./ha-entity-marker";
 
 
@@ -752,14 +752,8 @@ export class HaOSM extends ReactiveElement {
         box-shadow: none !important;
         text-align: center;
       }
-      //EMMA
-      search-input-outlined {
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        width: 300px;
+      .leaflet-control {
+        margin-top: 50px; /* Move zoom controls down */
       }
     `;
   }
