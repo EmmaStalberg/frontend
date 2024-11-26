@@ -26,7 +26,7 @@ class OpenStreetMapPanel extends LitElement {
 
   protected render() {
     return html`
-      <ha-top-app-bar-fixed>
+      <ha-top-app-bar-fixed class="top-bar">
         <ha-menu-button
           slot="navigationIcon"
           .hass=${this.hass}
@@ -41,7 +41,7 @@ class OpenStreetMapPanel extends LitElement {
               @click=${this._openZonesEditor}
             ></ha-icon-button>`
           : ""}
-        <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm>
+
         <search-input
           slot="actionItems"
           .hass=${this.hass}
@@ -52,9 +52,14 @@ class OpenStreetMapPanel extends LitElement {
       </ha-top-app-bar-fixed>
     `;
   }
+
+  // <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm. Add back over
+  // search-input if needed.
+
+  // Maybe needed to update when searching??
   // <search-input
   //       .filter=${this.searchTerm}
-  //       @value-changed=${this._handleSearchChange}
+  //       @value-changed=${this._handleSearch}
   //       label="Search for an address"
   //       .hass=${this.hass}
   //       autofocus
@@ -92,12 +97,23 @@ class OpenStreetMapPanel extends LitElement {
     const _oldHass = changedProps.get("hass") as HomeAssistant | undefined;
   }
 
+  "Added .top-bar and search-input to try and place search-input to the left";
+
   static get styles(): CSSResultGroup {
     return [
       haStyle,
       css`
         ha-osm {
           height: calc(100vh - var(--header-height));
+        }
+
+        .top-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        search-input {
+          margin-left: auto;
         }
       `,
     ];
