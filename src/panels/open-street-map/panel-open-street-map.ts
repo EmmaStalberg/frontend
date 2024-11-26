@@ -21,10 +21,9 @@ class OpenStreetMapPanel extends LitElement {
 
   @property({ type: Object }) public panel?: { config: object };
 
-  @state() private _filter?: string; //EMMA
+  @state() private _filter?: string; // EMMA
 
   protected render() {
-
     return html`
       <ha-top-app-bar-fixed>
         <ha-menu-button
@@ -41,15 +40,13 @@ class OpenStreetMapPanel extends LitElement {
               @click=${this._openZonesEditor}
             ></ha-icon-button>`
           : ""}
-        <ha-osm
-          .hass=${this.hass}
-          autoFit
-          interactiveZones
-        ></ha-osm>
+        <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm>
         <search-input-outlined
+          slot="actionItems"
           .hass=${this.hass}
           .filter=${this._filter}
-          @value-changed=${this._handleSearchChange}
+          @value-changed=${this._handleSearch}
+          style="background: white; border-radius: 5px; padding: 5px;"
         >
         </search-input-outlined>
       </ha-top-app-bar-fixed>
@@ -63,10 +60,10 @@ class OpenStreetMapPanel extends LitElement {
     this._filter = searchterm;
     if (!searchterm) return;
 
-    // call service from core 
+    // call service from core
     // eslint-disable-next-line unused-imports/no-unused-vars
     const results = await this.hass.callService("openstreetmap", "search", {
-      searchterm,
+      query: searchterm,
     });
   }
 
@@ -84,11 +81,11 @@ class OpenStreetMapPanel extends LitElement {
 
   static get styles(): CSSResultGroup {
     return [
-      haStyle, 
+      haStyle,
       css`
-      ha-osm {
-        height: calc(100vh - var(--header-height));
-      }
+        ha-osm {
+          height: calc(100vh - var(--header-height));
+        }
       `,
     ];
   }
