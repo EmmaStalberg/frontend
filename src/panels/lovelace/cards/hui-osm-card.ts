@@ -49,7 +49,7 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
+//  import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
