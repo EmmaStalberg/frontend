@@ -235,14 +235,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
               @click=${this._addNode}
             ></ha-icon-button-toggle>
-            <ha-icon-button-toggle
-              .label=${this.hass.localize(
-                `ui.panel.lovelace.cards.map.search_on_map`
-              )}
-              .path=${mdiMapSearch}
-              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-              @click=${this._handleSearch}
-            ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
           <ha-dialog id="layer-dialog"> </ha-dialog>
