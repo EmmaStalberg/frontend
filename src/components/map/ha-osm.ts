@@ -122,55 +122,6 @@ export class HaOSM extends ReactiveElement {
 
   protected update(changedProps: PropertyValues) {
     super.update(changedProps);
-
-    // if (!this._loaded) {
-    //   return;
-    // }
-    // // let autoFitRequired = false;
-    // const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
-
-    // if (changedProps.has("_loaded") || changedProps.has("entities")) {
-    //   this._drawEntities();
-    //   // autoFitRequired = true;
-    // } else if (this._loaded && oldHass && this.entities) {
-    //   // Check if any state has changed
-    //   for (const entity of this.entities) {
-    //     if (
-    //       oldHass.states[getEntityId(entity)] !==
-    //       this.hass!.states[getEntityId(entity)]
-    //     ) {
-    //       this._drawEntities();
-    //       // autoFitRequired = true;
-    //       break;
-    //     }
-    //   }
-    // }
-
-    // if (changedProps.has("_loaded") || changedProps.has("paths")) {
-    //   this._drawPaths();
-    // }
-
-    // if (changedProps.has("_loaded") || changedProps.has("layers")) {
-    //   this._drawLayers(changedProps.get("layers") as Layer[] | undefined);
-    //   autoFitRequired = true;
-    // }
-
-    // if (changedProps.has("_loaded") || (this.autoFit && autoFitRequired)) {
-    //   this.fitMap();
-    // }
-
-    // if (changedProps.has("zoom")) {
-    //   this.leafletMap!.setZoom(this.zoom);
-    // }
-
-    // if (
-    //   !changedProps.has("themeMode") &&
-    //   (!changedProps.has("hass") ||
-    //     (oldHass && oldHass.themes?.darkMode === this.hass.themes?.darkMode))
-    // ) {
-    //   return;
-    // }
-    // this._updateMapStyle();
   }
 
   private get _darkMode() {
