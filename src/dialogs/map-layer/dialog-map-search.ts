@@ -1,187 +1,92 @@
-import { mdiAlertOutline } from "@mdi/js";
 import type { CSSResultGroup } from "lit";
 import { css, html, LitElement, nothing } from "lit";
-import { customElement, property, query, state } from "lit/decorators";
-import { classMap } from "lit/directives/class-map";
-import { ifDefined } from "lit/directives/if-defined";
+import { customElement, property, state } from "lit/decorators";
 import { fireEvent } from "../../common/dom/fire_event";
-import "../../components/ha-md-dialog";
-import type { HaMdDialog } from "../../components/ha-md-dialog";
-import "../../components/ha-dialog-header";
-import "../../components/ha-svg-icon";
 import "../../components/ha-button";
-import "../../components/ha-textfield";
-import type { HaTextField } from "../../components/ha-textfield";
 import type { HomeAssistant } from "../../types";
-import type { DialogBoxParams } from "./show-dialog-box";
+import "../../components/ha-button-menu";
+import "../../components/ha-dialog";
+import type { UpdateMapSearchDialogParams } from "./show-dialog-map-search";
+import "../../components/ha-button-toggle-group";
+import "../../components/ha-icon-button-group";
+import "../../components/ha-icon-button-toggle";
 
-@customElement("dialog-box")
-class DialogBox extends LitElement {
+@customElement("ha-map-search-dialog")
+export class MapSearchDialog extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
-  @state() private _params?: DialogBoxParams;
+  @state() private _dialogParams?: UpdateMapSearchDialogParams;
 
-  @state() private _closeState?: "canceled" | "confirmed";
-
-  @query("ha-textfield") private _textField?: HaTextField;
-
-  @query("ha-md-dialog") private _dialog?: HaMdDialog;
-
-  public async showDialog(params: DialogBoxParams): Promise<void> {
-    this._params = params;
+  public showDialog(dialogParams: UpdateMapSearchDialogParams): void {
+    this._dialogParams = dialogParams;
   }
 
-  public closeDialog(): boolean {
-    if (this._params?.confirmation || this._params?.prompt) {
-      return false;
+  public _dialogClosed(): void {
+    this.closeDialog();
+  }
+
+  public closeDialog(): void {
+    if (!this._dialogParams) {
+      return;
     }
-    if (this._params) {
-      this._dismiss();
-      return true;
-    }
-    return true;
+    this._dialogParams = undefined;
+    fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
   protected render() {
-    if (!this._params) {
+    if (!this._dialogParams) {
       return nothing;
     }
 
-    const confirmPrompt = this._params.confirmation || this._params.prompt;
-
-    const dialogTitle =
-      this._params.title ||
-      (this._params.confirmation &&
-        this.hass.localize("ui.dialogs.generic.default_confirmation_title"));
-
     return html`
-      <ha-md-dialog
+      <ha-dialog
         open
-        .disableCancelAction=${confirmPrompt || false}
         @closed=${this._dialogClosed}
-        type="alert"
-        aria-labelledby="dialog-box-title"
-        aria-describedby="dialog-box-description"
+        escapeKeyAction
+        .heading=${this.hass.localize("ui.dialogs.map_search.title")}
       >
-        <div slot="headline">
-          <span .title=${dialogTitle} id="dialog-box-title">
-            ${this._params.warning
-              ? html`<ha-svg-icon
-                  .path=${mdiAlertOutline}
-                  style="color: var(--warning-color)"
-                ></ha-svg-icon> `
-              : nothing}
-            ${dialogTitle}
-          </span>
-        </div>
-        <div slot="content" id="dialog-box-description">
-          ${this._params.text ? html` <p>${this._params.text}</p> ` : ""}
-          ${this._params.prompt
-            ? html`
-                <ha-textfield
-                  dialogInitialFocus
-                  value=${ifDefined(this._params.defaultValue)}
-                  .placeholder=${this._params.placeholder}
-                  .label=${this._params.inputLabel
-                    ? this._params.inputLabel
-                    : ""}
-                  .type=${this._params.inputType
-                    ? this._params.inputType
-                    : "text"}
-                  .min=${this._params.inputMin}
-                  .max=${this._params.inputMax}
-                ></ha-textfield>
-              `
-            : ""}
-        </div>
-        <div slot="actions">
-          ${confirmPrompt &&
-          html`
-            <ha-button
-              @click=${this._dismiss}
-              ?dialogInitialFocus=${!this._params.prompt &&
-              this._params.destructive}
-            >
-              ${this._params.dismissText
-                ? this._params.dismissText
-                : this.hass.localize("ui.dialogs.generic.cancel")}
-            </ha-button>
-          `}
-          <ha-button
-            @click=${this._confirm}
-            ?dialogInitialFocus=${!this._params.prompt &&
-            !this._params.destructive}
-            class=${classMap({
-              destructive: this._params.destructive || false,
-            })}
-          >
-            ${this._params.confirmText
-              ? this._params.confirmText
-              : this.hass.localize("ui.dialogs.generic.ok")}
+        <div class="actions">
+          <ha-button @click=${this._searchMap} style="color:#000000"
+            >${this.hass.localize("ui.dialogs.map_search.search")}
           </ha-button>
+          >
         </div>
-      </ha-md-dialog>
+      </ha-dialog>
     `;
   }
 
-  private _cancel(): void {
-    if (this._params?.cancel) {
-      this._params.cancel();
-    }
-  }
-
-  private _dismiss(): void {
-    this._closeState = "canceled";
-    this._closeDialog();
-    this._cancel();
-  }
-
-  private _confirm(): void {
-    this._closeState = "confirmed";
-    this._closeDialog();
-    if (this._params!.confirm) {
-      this._params!.confirm(this._textField?.value);
-    }
-  }
-
-  private _closeDialog() {
-    fireEvent(this, "dialog-closed", { dialog: this.localName });
-    this._dialog?.close();
-  }
-
-  private _dialogClosed() {
-    if (!this._closeState) {
-      fireEvent(this, "dialog-closed", { dialog: this.localName });
-      this._cancel();
-    }
-    this._closeState = undefined;
-    this._params = undefined;
+  private _searchMap(): void {
+    // this._dialogParams?.confirm?.(STANDARD);
+    // handle search action 
+    this.closeDialog();
   }
 
   static get styles(): CSSResultGroup {
     return css`
-      :host([inert]) {
-        pointer-events: initial !important;
-        cursor: initial !important;
-      }
-      a {
-        color: var(--primary-color);
-      }
       p {
         margin: 0;
         color: var(--primary-text-color);
       }
-      .no-bottom-padding {
-        padding-bottom: 0;
+      ha-dialog {
+        /* Place above other dialogs */
+        --dialog-z-index: 104;
       }
-      .secondary {
-        color: var(--secondary-text-color);
+      @media all and (min-width: 600px) {
+        ha-dialog {
+          --mdc-dialog-min-width: 400px;
+        }
       }
-      .destructive {
-        --mdc-theme-primary: var(--error-color);
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+        justify-content: center;
       }
-      ha-textfield {
-        width: 100%;
+
+      ha-button {
+        color: #000000;
+        font-size: 16px;
       }
     `;
   }
@@ -189,6 +94,6 @@ class DialogBox extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "dialog-box": DialogBox;
+    "ha-map-search-dialog": MapLayerDialog;
   }
 }
