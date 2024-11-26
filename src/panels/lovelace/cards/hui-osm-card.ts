@@ -197,6 +197,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
           <search-input-outlined
               id="search-bar"
               .hass=${this.hass}
+              @value-changed=${this._handleSearchChange}
               @keypress=${this._handleSearch}
               .label=${this.hass.localize(
                 "ui.panel.lovelace.editor.edit_card.search_cards"
@@ -383,19 +384,24 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // TODO
   }
 
+  private _handleSearchChange(ev: CustomEvent) {
+    this._filter = ev.detail.value;
+  }
+
   // EMMA
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
-    if (event.key !== "Enter") {
-      console.log("testing");
-      return;
-    }
+    console.log("Emmas innan " + this._filter);
+
+    if (event.key !== "Enter") return;
+
+    console.log("it is enter");
     
-    //  unsure which of these two below to use?
+    // HOW TO HANDLE BELOW?? WANT TO GET THE SEARCH TERM 
     // const searchterm = event.detail.value.toLowerCase().trim();
-    const searchterm = (event.target as HTMLInputElement).value.toLowerCase().trim();
-    
-    this._filter = searchterm;
+    // const searchterm = (event.target as HTMLInputElement).value;
+    const searchterm = this._filter
     if (!searchterm) return;
+    console.log("Emmas " + this._filter);
 
     // call service from core
     const results = await this.hass.callService("openstreetmap", "search", {
