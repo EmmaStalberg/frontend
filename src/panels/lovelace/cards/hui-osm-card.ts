@@ -193,14 +193,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             interactiveZones
             renderPassive
           ></ha-osm>
-          <search-input
+          <search-input-outlined
             id="search-bar"
             .hass=${this.hass}
-            @value-changed=${this._handleSearch}
+            @keydown=${this._handleKeyDown}
             .label=${this.hass.localize(
               "ui.panel.lovelace.editor.edit_card.search_cards"
             )}
-          ></search-input>
+          ></search-input-outlined>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -238,9 +238,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               .label=${this.hass.localize(
                 `ui.panel.lovelace.cards.map.search_on_map`
               )}
-              .path=${mdiMapSearch}
-              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-              @click=${this._handleSearch}
             ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
@@ -425,6 +422,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     //   //   marker.setOpacity(0.3); // Hide marker
     //   // }
     // });
+  }
+
+  _handleKeyDown(event) {
+    // Check if the key pressed is "Enter"
+    if (event.key === "Enter") {
+      console.log("Enter key pressed!");
+      this._handleSearch(event); // Call the search handler
+    }
   }
 
   private async _changeLayer(): Promise<void> {

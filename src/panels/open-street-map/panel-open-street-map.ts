@@ -26,7 +26,7 @@ class OpenStreetMapPanel extends LitElement {
 
   protected render() {
     return html`
-      <ha-top-app-bar-fixed class="top-bar">
+      <ha-top-app-bar-fixed>
         <ha-menu-button
           slot="navigationIcon"
           .hass=${this.hass}
@@ -41,7 +41,7 @@ class OpenStreetMapPanel extends LitElement {
               @click=${this._openZonesEditor}
             ></ha-icon-button>`
           : ""}
-
+        <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm>
         <search-input
           slot="actionItems"
           .hass=${this.hass}
@@ -53,7 +53,7 @@ class OpenStreetMapPanel extends LitElement {
     `;
   }
 
-  // <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm. Add back over
+  //  Add back over
   // search-input if needed.
 
   // Maybe needed to update when searching??
@@ -105,15 +105,6 @@ class OpenStreetMapPanel extends LitElement {
       css`
         ha-osm {
           height: calc(100vh - var(--header-height));
-        }
-
-        .top-bar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        search-input {
-          margin-left: auto;
         }
       `,
     ];
