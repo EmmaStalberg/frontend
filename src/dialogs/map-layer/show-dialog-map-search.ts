@@ -1,6 +1,6 @@
 import { fireEvent } from "../../common/dom/fire_event";
 
-//TODO - need to change this method, now same as layer
+// TODO - need to change this method, now same as layer
 export interface UpdateMapSearchDialogParams {
   confirm?: (layer?: string) => false;
   cancel?: () => void;

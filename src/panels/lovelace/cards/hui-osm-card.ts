@@ -3,7 +3,7 @@ import {
   mdiLayersTriple,
   mdiShare,
   mdiNotePlusOutline,
-  mdiMapSearch
+  mdiMapSearch,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
 import type { LatLngTuple } from "leaflet";
@@ -49,7 +49,7 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
+//  import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -90,9 +90,9 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
-  @state() private searchResults: any[] = []; // Store search results EMMA 
+  @state() private searchResults: any[] = []; // Store search results EMMA
 
-  @state() private _filter?: string; //EMMA
+  @state() private _filter?: string; // EMMA
 
   public setConfig(config: MapCardConfig): void {
     if (!config) {
@@ -390,17 +390,16 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // TODO
   }
 
-  //EMMA
+  // EMMA
   private async _handleSearch(event: CustomEvent): Promise<void> {
-    //unsure which of these two below to use? 
-    const response = await showMapSearchDialog(this, {});
+    //  unsure which of these two below to use?
     const searchterm = event.detail.value.toLowerCase().trim();
     this._filter = searchterm;
     if (!searchterm) return;
 
-    // call service from core 
+    // call service from core
     const results = await this.hass.callService("openstreetmap", "search", {
-      searchterm,
+      query: searchterm,
     });
 
     // // Handle errors in some way
