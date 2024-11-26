@@ -613,7 +613,7 @@ export class HaOSM extends ReactiveElement {
       }
 
       //EMMA
-      const { name } = entity; // how to get this properly?
+      const { name } = entity; // how to get this properly? need to get "name" of search here
       if (!latitude || !longitude) continue;
   
       const markerSearch = Leaflet.marker([latitude, longitude], {
