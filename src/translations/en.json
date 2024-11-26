@@ -1789,6 +1789,10 @@
         "transportmap": "Transport Map",
         "humanitarian": "Humanitarian"
       },
+      "map_search": {
+        "title": "Map Search", 
+        "search": "Search"
+      },
       "matter-add-device": {
         "add_device": "Add device",
         "add_device_failed": "Failed to add the device",
