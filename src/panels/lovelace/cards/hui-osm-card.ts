@@ -197,7 +197,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
           <search-input-outlined
               id="search-bar"
               .hass=${this.hass}
-              @value-changed=${this._handleSearch}
+              @keypress=${this._handleSearch}
               .label=${this.hass.localize(
                 "ui.panel.lovelace.editor.edit_card.search_cards"
               )}
@@ -384,9 +384,16 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   }
 
   // EMMA
-  private async _handleSearch(event: CustomEvent): Promise<void> {
+  private async _handleSearch(event: KeyboardEvent): Promise<void> {
+    if (event.key !== "Enter") {
+      console.log("testing");
+      return;
+    }
+    
     //  unsure which of these two below to use?
-    const searchterm = event.detail.value.toLowerCase().trim();
+    // const searchterm = event.detail.value.toLowerCase().trim();
+    const searchterm = (event.target as HTMLInputElement).value.toLowerCase().trim();
+    
     this._filter = searchterm;
     if (!searchterm) return;
 
