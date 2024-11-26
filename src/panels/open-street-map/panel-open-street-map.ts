@@ -41,14 +41,14 @@ class OpenStreetMapPanel extends LitElement {
               @click=${this._openZonesEditor}
             ></ha-icon-button>`
           : ""}
-        <search-input
+        <!-- <search-input
           slot="actionItems"
           .hass=${this.hass}
           .filter=${this._filter}
           @value-changed=${this._handleSearch}
           style="background: white; border-radius: 5px; padding: 5px;"
         >
-        </search-input>
+        </search-input> -->
       </ha-top-app-bar-fixed>
       <ha-osm
           .hass=${this.hass}
@@ -78,17 +78,17 @@ class OpenStreetMapPanel extends LitElement {
 
   // eslint-disable-next-line spaced-comment
   //EMMA - also check hui osm card
-  private async _handleSearch(event: CustomEvent): Promise<void> {
-    const searchterm = event.detail.value.toLowerCase().trim();
-    this._filter = searchterm;
-    if (!searchterm) return;
+  // private async _handleSearch(event: CustomEvent): Promise<void> {
+  //   const searchterm = event.detail.value.toLowerCase().trim();
+  //   this._filter = searchterm;
+  //   if (!searchterm) return;
 
-    // call service from core
-    // eslint-disable-next-line unused-imports/no-unused-vars
-    const results = await this.hass.callService("openstreetmap", "search", {
-      query: searchterm,
-    });
-  }
+  //   // call service from core
+  //   // eslint-disable-next-line unused-imports/no-unused-vars
+  //   const results = await this.hass.callService("openstreetmap", "search", {
+  //     query: searchterm,
+  //   });
+  // }
 
   private _openZonesEditor() {
     navigate("/config/zone?historyBack=1");
