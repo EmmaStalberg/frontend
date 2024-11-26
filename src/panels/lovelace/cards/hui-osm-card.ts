@@ -49,6 +49,7 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
+import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -90,6 +91,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
   @state() private searchResults: any[] = []; // Store search results EMMA 
+
+  @state() private _filter?: string; //EMMA
 
   public setConfig(config: MapCardConfig): void {
     if (!config) {
@@ -387,8 +390,12 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // TODO
   }
 
+  //EMMA
   private async _handleSearch(event: CustomEvent): Promise<void> {
+    //unsure which of these two below to use? 
+    const response = await showMapSearchDialog(this, {});
     const searchterm = event.detail.value.toLowerCase().trim();
+    this._filter = searchterm;
     if (!searchterm) return;
 
     // call service from core 
@@ -396,10 +403,11 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       searchterm,
     });
 
-    if (results.error) {
-      this._error = { code: "search_error", message: results.error };
-      return;
-    }
+    // // Handle errors in some way
+    // if (results.error) {
+    //   this._error = { code: "search_error", message: results.error };
+    //   return;
+    // }
 
     this._mapEntities = results.map((result) => ({
       entity_id: result.id,
