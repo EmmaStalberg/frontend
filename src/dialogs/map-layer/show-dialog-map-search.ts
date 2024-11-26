@@ -1,96 +1,36 @@
-import type { TemplateResult } from "lit";
 import { fireEvent } from "../../common/dom/fire_event";
 
-interface BaseDialogBoxParams {
-  confirmText?: string;
-  text?: string | TemplateResult;
-  title?: string;
-  warning?: boolean;
-}
-
-export interface AlertDialogParams extends BaseDialogBoxParams {
-  confirm?: () => void;
-}
-
-export interface ConfirmationDialogParams extends BaseDialogBoxParams {
-  dismissText?: string;
-  confirm?: () => void;
+//TODO - need to change this method, now same as layer
+export interface UpdateMapSearchDialogParams {
+  confirm?: (layer?: string) => false;
   cancel?: () => void;
-  destructive?: boolean;
 }
 
-export interface PromptDialogParams extends BaseDialogBoxParams {
-  inputLabel?: string;
-  inputType?: string;
-  defaultValue?: string;
-  placeholder?: string;
-  confirm?: (out?: string) => void;
-  cancel?: () => void;
-  inputMin?: number | string;
-  inputMax?: number | string;
-}
-
-export interface DialogBoxParams
-  extends ConfirmationDialogParams,
-    PromptDialogParams {
-  confirm?: (out?: string) => void;
-  confirmation?: boolean;
-  prompt?: boolean;
-}
-
-export const loadGenericDialog = () => import("./dialog-map-search");
-
-const showDialogHelper = (
+export const showMapSearchDialog = (
   element: HTMLElement,
-  dialogParams: DialogBoxParams,
-  extra?: {
-    confirmation?: DialogBoxParams["confirmation"];
-    prompt?: DialogBoxParams["prompt"];
-  }
+  dialogParams: UpdateMapLayerDialogParams
 ) =>
-  new Promise((resolve) => {
-    const origCancel = dialogParams.cancel;
+  new Promise<string | null>((resolve) => {
     const origConfirm = dialogParams.confirm;
+    const origCancel = dialogParams.cancel;
 
     fireEvent(element, "show-dialog", {
-      dialogTag: "dialog-box",
-      dialogImport: loadGenericDialog,
+      dialogTag: "ha-map-search-dialog",
+      dialogImport: () => import("./dialog-map-search"),
       dialogParams: {
         ...dialogParams,
-        ...extra,
         cancel: () => {
-          resolve(extra?.prompt ? null : false);
+          resolve(null);
           if (origCancel) {
             origCancel();
           }
         },
-        confirm: (out) => {
-          resolve(extra?.prompt ? out : true);
+        confirm: (layer: string) => {
+          resolve(layer);
           if (origConfirm) {
-            origConfirm(out);
+            origConfirm(layer);
           }
         },
       },
     });
   });
-
-export const showAlertDialog = (
-  element: HTMLElement,
-  dialogParams: AlertDialogParams
-) => showDialogHelper(element, dialogParams);
-
-export const showConfirmationDialog = (
-  element: HTMLElement,
-  dialogParams: ConfirmationDialogParams
-) =>
-  showDialogHelper(element, dialogParams, {
-    confirmation: true,
-  }) as Promise<boolean>;
-
-export const showPromptDialog = (
-  element: HTMLElement,
-  dialogParams: PromptDialogParams
-) =>
-  showDialogHelper(element, dialogParams, { prompt: true }) as Promise<
-    null | string
-  >;
