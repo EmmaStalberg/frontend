@@ -83,8 +83,6 @@ export class HaOSM extends ReactiveElement {
 
   @state() private _loaded = false;
 
-  @state() private searchResults: any[] = []; // Store search results EMMA 
-
   public leafletMap?: Map;
 
   private Leaflet?: LeafletModuleType;
@@ -101,15 +99,8 @@ export class HaOSM extends ReactiveElement {
 
   private _mapPaths: Array<Polyline | CircleMarker> = [];
 
-  //EMMA
-  // constructor() {
-  //   super();
-  //   this.attachShadow({ mode: "open" });
-  // }
-
   public connectedCallback(): void {
     super.connectedCallback();
-    // this._initMapAndSearch(); EMMA
     this._loadMap();
     this._attachObserver();    
   }
@@ -190,24 +181,6 @@ export class HaOSM extends ReactiveElement {
   }
 
   private _loading = false;
-
-  // //EMMA
-  // private async _initMapAndSearch(): Promise<void> {
-  //   // Create a div container for the map and search input
-  //   const mapContainer = document.createElement('div');
-  //   mapContainer.id = 'map-container';
-
-  //   // Create and append the search-input-outlined component
-  //   const searchInput = document.createElement('search-input-outlined');
-  //   searchInput.setAttribute('id', 'search-input');
-  //   searchInput.setAttribute('placeholder', 'Search for an entity...');
-  //   searchInput.addEventListener('search-input-changed', this._onSearchInputChanged.bind(this));
-
-  //   mapContainer.appendChild(searchInput);
-
-  //   // Add map container to the DOM (assuming there's a shadow root or main container to append to)
-  //   this.shadowRoot.appendChild(mapContainer);
-  // }
 
   private async _loadMap(): Promise<void> {
     if (this._loading) return;
@@ -442,20 +415,6 @@ export class HaOSM extends ReactiveElement {
     });
   }
 
-  // EMMA 
-  // render() {
-  //   return html`
-  //     <div id="map-container">
-  //       <search-input-outlined
-  //         id="search-input"
-  //         placeholder="Search for an adress or place..."
-  //         @value-changed=${this._onSearchInputChanged}
-  //       ></search-input-outlined>
-  //       <div id="map"></div>
-  //     </div>
-  //   `;
-  // }
-
   private _drawEntities(): void {
     const hass = this.hass;
     const map = this.leafletMap;
@@ -611,17 +570,6 @@ export class HaOSM extends ReactiveElement {
           })
         );
       }
-
-      //EMMA
-      const { name } = entity; // how to get this properly? need to get "name" of search here
-      if (!latitude || !longitude) continue;
-  
-      const markerSearch = Leaflet.marker([latitude, longitude], {
-        title: name,
-      });
-  
-      this._mapItems.push(markerSearch);
-      map.addLayer(markerSearch);
     }
 
     this._mapItems.forEach((marker) => map.addLayer(marker));
@@ -637,46 +585,6 @@ export class HaOSM extends ReactiveElement {
     }
     this._resizeObserver.observe(this);
   }
-
-  //EMMA
-  // private async _onSearchInputChanged(event: CustomEvent) {
-  //   const searchterm = event.detail.value.toLowerCase().trim();
-  //   if (!searchterm) return;
-
-  //   // call service from core 
-  //   const result = await this.hass.callService("openstreetmap", "search", {
-  //     searchterm,
-  //   });
-
-  //   if (result.error) {
-  //     console.error("Search error:", result.error);
-  //     return;
-  //   }
-
-  //   this.searchResults = result; // Store the search results
-  //   this._updateMapMarkers();
-  //   // this._mapItems.forEach((marker) => {
-  //   //   const markerLabel = marker.options.icon.options.html.toLowerCase();
-  //   //   // if (markerLabel.includes(searchTerm)) {
-  //   //   //   marker.setOpacity(1); // Show marker
-  //   //   // } else {
-  //   //   //   marker.setOpacity(0.3); // Hide marker
-  //   //   // }
-  //   // });
-  // }
-
-  // //EMMA
-  // private _updateMapMarkers() {
-  //   const map = this.shadowRoot?.querySelector("#map");
-  //   if (!map) return;
-
-  //   // Clear existing markers (if any)
-  //   // Add new markers based on the search results
-  //   this.searchResults.forEach((result) => {
-  //     const marker = L.marker([result.lat, result.lon]);
-  //     marker.addTo(map);
-  //   });
-  // }
 
   static get styles(): CSSResultGroup {
     return css`
@@ -705,11 +613,6 @@ export class HaOSM extends ReactiveElement {
         cursor: -moz-grabbing;
         cursor: -webkit-grabbing;
       }
-      /* //EMMA
-      #map-container {
-        position: relative;
-        height: 100%;
-      } */
       .leaflet-tile-pane {
         filter: var(--map-filter);
       }

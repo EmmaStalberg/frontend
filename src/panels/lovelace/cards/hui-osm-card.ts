@@ -91,9 +91,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
-  @state() private searchResults: any[] = []; // Store search results EMMA
-
-  @state() private _filter?: string; // EMMA
+  @state() private _filter?: string; 
 
   public setConfig(config: MapCardConfig): void {
     if (!config) {
@@ -388,7 +386,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._filter = ev.detail.value;
   }
 
-  // EMMA
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     console.log("Emmas innan " + this._filter);
 
@@ -396,9 +393,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
     console.log("it is enter");
     
-    // HOW TO HANDLE BELOW?? WANT TO GET THE SEARCH TERM 
-    // const searchterm = event.detail.value.toLowerCase().trim();
-    // const searchterm = (event.target as HTMLInputElement).value;
     const searchterm = this._filter
     if (!searchterm) return;
     console.log("Emmas " + this._filter);
@@ -408,29 +402,10 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       query: searchterm,
     });
 
-    // // Handle errors in some way
-    // if (results.error) {
-    //   this._error = { code: "search_error", message: results.error };
-    //   return;
-    // }
+    // get coordinates 
 
-    this._mapEntities = results.map((result) => ({
-      entity_id: result.id,
-      color: this._getColor(result.id),
-      name: result.display_name,
-      focus: true,
-    }));
+    // update map - center around it and add marker
 
-    // this.searchResults = result; // Store the search results
-    // this._updateMapMarkers();
-    // this._mapItems.forEach((marker) => {
-    //   const markerLabel = marker.options.icon.options.html.toLowerCase();
-    //   // if (markerLabel.includes(searchTerm)) {
-    //   //   marker.setOpacity(1); // Show marker
-    //   // } else {
-    //   //   marker.setOpacity(0.3); // Hide marker
-    //   // }
-    // });
   }
 
   private async _changeLayer(): Promise<void> {
