@@ -52,7 +52,7 @@ class OpenStreetMapPanel extends LitElement {
           .hass=${this.hass}
           .filter=${this._filter}
           @value-changed=${this._handleSearch}
-          style="background: white; border-radius: 5px; padding: 5px;"
+          style="background: white; border-radius: 5px; padding: 100px;"
         >
         </search-input>
       </ha-top-app-bar-fixed>
