@@ -586,6 +586,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
         position: relative;
         height: 100%;
       }
+
+      search-input-outlined {
+        position: absolute;
+          top: 10px;
+          right: 10px;
+          z-index: 10;
+      }
     `;
   }
 }
