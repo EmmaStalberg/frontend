@@ -58,38 +58,6 @@ class OpenStreetMapPanel extends LitElement {
     `;
   }
 
-  // <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm. Add back over
-  // search-input if needed.
-
-  // Maybe needed to update when searching??
-  // <search-input
-  //       .filter=${this.searchTerm}
-  //       @value-changed=${this._handleSearch}
-  //       label="Search for an address"
-  //       .hass=${this.hass}
-  //       autofocus
-  //     ></search-input>
-  //     <div class="results">
-  //       ${this.results.map(
-  //         (result) => html`<div class="result-item">${result.display_name}</div>`
-  //       )}
-  //     </div>
-  //   `;
-
-  // eslint-disable-next-line spaced-comment
-  //EMMA - also check hui osm card
-  // private async _handleSearch(event: CustomEvent): Promise<void> {
-  //   const searchterm = event.detail.value.toLowerCase().trim();
-  //   this._filter = searchterm;
-  //   if (!searchterm) return;
-
-  //   // call service from core
-  //   // eslint-disable-next-line unused-imports/no-unused-vars
-  //   const results = await this.hass.callService("openstreetmap", "search", {
-  //     query: searchterm,
-  //   });
-  // }
-
   private _openZonesEditor() {
     navigate("/config/zone?historyBack=1");
   }
