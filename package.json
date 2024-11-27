@@ -86,6 +86,7 @@
     "gulp": "^5.0.0",
     "husky": "^9.1.7",
     "lint-staged": "15.2.10",
+    "prettier": "3.4.1",
     "workbox-build": "7.1.1"
   },
   "packageManager": "npm@9.2.0"
