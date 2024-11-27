@@ -26,6 +26,7 @@ class OpenStreetMapPanel extends LitElement {
 
   protected render() {
     return html`
+    <div class="container"></div>
       <ha-top-app-bar-fixed>
         <ha-menu-button
           slot="navigationIcon"
@@ -33,23 +34,27 @@ class OpenStreetMapPanel extends LitElement {
           .narrow=${this.narrow}
         ></ha-menu-button>
         <div slot="title">OpenStreetMap Panel</div>
-        ${!__DEMO__ && this.hass.user?.is_admin
-          ? html`<ha-icon-button
-              slot="actionItems"
-              .label=${this.hass!.localize("ui.panel.map.edit_zones")}
-              .path=${mdiPencil}
-              @click=${this._openZonesEditor}
-            ></ha-icon-button>`
-          : ""}
+        ${
+          !__DEMO__ && this.hass.user?.is_admin
+            ? html`<ha-icon-button
+                slot="actionItems"
+                .label=${this.hass!.localize("ui.panel.map.edit_zones")}
+                .path=${mdiPencil}
+                @click=${this._openZonesEditor}
+              ></ha-icon-button>`
+            : ""
+        }
         <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm>
-        <search-input
-          slot="actionItems"
-          .hass=${this.hass}
-          .filter=${this._filter}
-          @value-changed=${this._handleSearch}
-        >
-        </search-input>
       </ha-top-app-bar-fixed>
+
+      <search-input
+        class="search-bar"
+        .hass=${this.hass}
+        .filter=${this._filter}
+        @value-changed=${this._handleSearch}
+      >
+      </search-input>
+    </div>
     `;
   }
 
@@ -105,6 +110,17 @@ class OpenStreetMapPanel extends LitElement {
       css`
         ha-osm {
           height: calc(100vh - var(--header-height));
+        }
+
+        .container {
+          position: relative;
+        }
+
+        .search-bar {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          z-index: 10;
         }
       `,
     ];
