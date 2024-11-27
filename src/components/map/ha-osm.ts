@@ -161,13 +161,6 @@ export class HaOSM extends ReactiveElement {
       map.on("locationfound", (e: L.LocationEvent) => {
         map.setView(e.latlng);
       });
-      // this.leafletMap.setView(
-      //   new this.Leaflet.LatLng(
-      //     this.hass.config.latitude,
-      //     this.hass.config.longitude
-      //   ),
-      //   options?.zoom || this.zoom
-      // );
       return;
     }
 
@@ -181,15 +174,29 @@ export class HaOSM extends ReactiveElement {
       bounds.extend("getBounds" in zone ? zone.getBounds() : zone.getLatLng());
     });
 
-    // this.layer?.forEach((layer: any) => {
-    //   bounds.extend(
-    //     "getBounds" in layer ? layer.getBounds() : layer.getLatLng()
-    //   );
-    // });
-
     bounds = bounds.pad(options?.pad ?? 0.5);
 
     this.leafletMap.fitBounds(bounds, { maxZoom: options?.zoom || this.zoom });
+  }
+
+  // Note! This works for one pair of coordinates. If one want to later make this work for several 
+  // coordinates at once, it needs to be updated similar to fitMap
+  public fitMapToCoordinates(
+    coordinates: LatLngTuple,
+    options?: { zoom?: number; pad?: number }
+  ): void {
+    if (!this.leafletMap || !this.Leaflet || !this.hass) {
+      return;
+    }
+  
+    const [lat, lon] = coordinates;
+  
+    this.leafletMap.setView(
+      new this.Leaflet.LatLng(lat, lon),
+      options?.zoom || this.zoom
+    );
+  
+    this.Leaflet.marker([lat, lon]).addTo(this.leafletMap);
   }
 
   public fitBounds(

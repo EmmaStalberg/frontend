@@ -3,7 +3,6 @@ import {
   mdiLayersTriple,
   mdiShare,
   mdiNotePlusOutline,
-  mdiMapSearch,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
 import type { LatLngTuple } from "leaflet";
@@ -50,7 +49,6 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-//  import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -398,13 +396,17 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     console.log("Emmas " + this._filter);
 
     // call service from core
-    const results = await this.hass.callService("openstreetmap", "search", {
+    const results = await this.hass.callService("open_street_map", "search", {
       query: searchterm,
     });
 
-    // get coordinates 
+    // get coordinates - call from core
 
     // update map - center around it and add marker
+    // NOW HARDCODED - LATER DYNAMICALLY WITH CORE 
+    const lat = 57.6915335;
+    const lon = 11.9571416;
+    this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
 
   }
 
