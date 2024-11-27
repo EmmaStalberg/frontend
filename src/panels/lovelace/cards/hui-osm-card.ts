@@ -193,7 +193,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
           <search-input-outlined
               id="search-bar"
               .hass=${this.hass}
-              @value-changed=${this._handleSearchChange}
+              @value-changed=${this._handleSearchInputChange}
               @keypress=${this._handleSearch}
               .label=${this.hass.localize(
                 "ui.panel.lovelace.editor.edit_card.search_cards"
@@ -380,34 +380,70 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // TODO
   }
 
-  private _handleSearchChange(ev: CustomEvent) {
+  private _handleSearchInputChange(ev: CustomEvent) {
     this._filter = ev.detail.value;
   }
 
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
-    console.log("Emmas innan " + this._filter);
-
     if (event.key !== "Enter") return;
 
-    console.log("it is enter");
+    console.log("ENTER IS PRESSED");
     
-    const searchterm = this._filter
+    const searchterm = this._filter?.trim()
     if (!searchterm) return;
-    console.log("Emmas " + this._filter);
+    console.log("Searching for ", searchterm);
 
-    // call service from core
-    const results = await this.hass.callService("open_street_map", "search", {
+    // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
+    // await this.hass.callService("open_street_map", "search", {
+    //   query: searchterm,
+    // });
+
+    // ANOTHER TRY, MIGHT NOT USE
+    // this.hass.bus.on("open_street_map_event", (event) => {
+    //   const { error, results, coordinates } = event.detail;
+
+    //   if (error) {
+    //       console.error("Search Error:", error);
+    //       return;
+    //   }
+
+    //   // Center map around given coordinates retreived from search
+    //   if (coordinates) {
+    //       const [lat, lon] = coordinates;
+    //       this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+    //       console.log("Coordinates found:", lat, lon);
+    //   }
+
+    //   // THIS IS FOR WHEN ADDING THE ENTRE RESULT,
+    //   // BUT MIGHT NEED TO BE IN ANOTHER {}
+    //   if (results) {
+    //       // Handle displaying results, for example, a list of addresses
+    //       console.log("Search results:", results);
+    //   }
+    // });
+
+    // get coordinates 
+    const coordinates = await this.hass.callService("open_street_map", "get_address_coordinates", {
       query: searchterm,
     });
 
-    // get coordinates - call from core
+    if (coordinates.error) {
+      console.error(new Error("Error fetching coordinates:", coordinates.error));
+      return;
+    }
 
     // update map - center around it and add marker
-    // NOW HARDCODED - LATER DYNAMICALLY WITH CORE 
-    const lat = 57.6915335;
-    const lon = 11.9571416;
+    // const lat = 57.6915335;
+    // const lon = 11.9571416;
+    const lat = coordinates[0];
+    const lon = coordinates[1];
     this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
 
+    // Call the "search" service if needed
+    // const results = await this.hass.callService("open_street_map", "search", {
+    //   query: searchterm,
+    // });
+    // console.log("Search results:", results);
   }
 
   private async _changeLayer(): Promise<void> {
