@@ -1781,6 +1781,18 @@
         "text": "This will create a backup before installing.",
         "create": "Create"
       },
+      "map_layer": {
+        "title": "Map Layers",
+        "standard": "Standard",
+        "cyclosm": "CyclOsm",
+        "cyclemap": "Cycle Map",
+        "transportmap": "Transport Map",
+        "humanitarian": "Humanitarian"
+      },
+      "map_search": {
+        "title": "Map Search", 
+        "search": "Search"
+      },
       "matter-add-device": {
         "add_device": "Add device",
         "add_device_failed": "Failed to add the device",
@@ -5582,7 +5594,11 @@
             "description": "Home Assistant is starting, please wait…"
           },
           "map": {
-            "reset_focus": "Reset focus"
+            "reset_focus": "Reset focus",
+            "change_layer": "Change layer",
+            "share_location": "Share location",
+            "add_a_note": "Add a note",
+            "search_on_map": "Search on map"
           },
           "energy": {
             "loading": "Loading…",

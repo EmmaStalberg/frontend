@@ -2,17 +2,18 @@ import { mdiPencil } from "@mdi/js";
 import type { CSSResultGroup, PropertyValues } from "lit";
 import { css, html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators";
-import { computeStateDomain } from "../../common/entity/compute_state_domain";
 import { navigate } from "../../common/navigate";
+import "../../components/ha-card";
 import "../../components/ha-icon-button";
 import "../../components/ha-menu-button";
 import "../../components/ha-top-app-bar-fixed";
-import "../../components/map/ha-map";
+import "../../components/map/ha-osm";
+import "../../components/search-input";
 import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
-@customElement("ha-panel-map")
-class HaPanelMap extends LitElement {
+@customElement("open-street-map-panel")
+class OpenStreetMapPanel extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @property({ type: Boolean }) public narrow = false;
@@ -21,17 +22,17 @@ class HaPanelMap extends LitElement {
 
   @property({ type: Object }) public panel?: { config: object };
 
-  private _entities: string[] = [];
+  @state() private _filter?: string; // EMMA
 
   protected render() {
     return html`
-      <ha-top-app-bar-fixed>
+      <ha-top-app-bar-fixed class="top-bar">
         <ha-menu-button
           slot="navigationIcon"
           .hass=${this.hass}
           .narrow=${this.narrow}
         ></ha-menu-button>
-        <div slot="title">${this.hass.localize("panel.map")}</div>
+        <div slot="title">OpenStreetMap Panel</div>
         ${!__DEMO__ && this.hass.user?.is_admin
           ? html`<ha-icon-button
               slot="actionItems"
@@ -40,13 +41,20 @@ class HaPanelMap extends LitElement {
               @click=${this._openZonesEditor}
             ></ha-icon-button>`
           : ""}
-        <ha-map
+        <!-- <search-input
+          slot="actionItems"
           .hass=${this.hass}
-          .entities=${this._entities}
+          .filter=${this._filter}
+          @value-changed=${this._handleSearch}
+          style="background: white; border-radius: 5px; padding: 5px;"
+        >
+        </search-input> -->
+      </ha-top-app-bar-fixed>
+      <ha-osm
+          .hass=${this.hass}
           autoFit
           interactiveZones
-        ></ha-map>
-      </ha-top-app-bar-fixed>
+        ></ha-osm>
     `;
   }
 
@@ -59,44 +67,24 @@ class HaPanelMap extends LitElement {
     if (!changedProps.has("hass")) {
       return;
     }
-    const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
-    this._getStates(oldHass);
-  }
-
-  private _getStates(oldHass?: HomeAssistant) {
-    let changed = false;
-    const personSources = new Set<string>();
-    const locationEntities: string[] = [];
-    Object.values(this.hass!.states).forEach((entity) => {
-      if (
-        entity.state === "home" ||
-        !("latitude" in entity.attributes) ||
-        !("longitude" in entity.attributes)
-      ) {
-        return;
-      }
-      locationEntities.push(entity.entity_id);
-      if (computeStateDomain(entity) === "person" && entity.attributes.source) {
-        personSources.add(entity.attributes.source);
-      }
-      if (oldHass?.states[entity.entity_id] !== entity) {
-        changed = true;
-      }
-    });
-
-    if (changed) {
-      this._entities = locationEntities.filter(
-        (entity) => !personSources.has(entity)
-      );
-    }
+    const _oldHass = changedProps.get("hass") as HomeAssistant | undefined;
   }
 
   static get styles(): CSSResultGroup {
     return [
       haStyle,
       css`
-        ha-map {
+        ha-osm {
           height: calc(100vh - var(--header-height));
+        }
+
+        .top-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        search-input {
+          margin-left: auto;
         }
       `,
     ];
@@ -105,6 +93,6 @@ class HaPanelMap extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "ha-panel-map": HaPanelMap;
+    "open-street-map-panel": OpenStreetMapPanel;
   }
 }

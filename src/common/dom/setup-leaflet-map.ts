@@ -21,7 +21,12 @@ export const setupLeafletMap = async (
   style.setAttribute("href", "/static/images/leaflet/leaflet.css");
   style.setAttribute("rel", "stylesheet");
   mapElement.parentNode.appendChild(style);
-  map.setView([52.3731339, 4.8903147], 13);
+  // map.setView([57.7072326, 11.9670171], 13);
+  map.locate({ setView: true, maxZoom: 13 });
+  map.on("locationfound", (e: L.LocationEvent) => {
+    map.setView(e.latlng);
+    Leaflet.marker(e.latlng).addTo(map);
+  });
 
   const tileLayer = createTileLayer(Leaflet).addTo(map);
 
@@ -39,16 +44,56 @@ export const replaceTileLayer = (
   return tileLayer;
 };
 
-const createTileLayer = (leaflet: LeafletModuleType): TileLayer =>
+export const createTileLayer = (leaflet: LeafletModuleType): TileLayer =>
+  leaflet.tileLayer(`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    subdomains: "abcd",
+    minZoom: 0,
+    maxZoom: 20,
+  });
+
+export const createCyclOSMTileLayer = (leaflet: LeafletModuleType): TileLayer =>
   leaflet.tileLayer(
-    `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${
-      leaflet.Browser.retina ? "@2x.png" : ".png"
-    }`,
+    `https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png`,
     {
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: "abcd",
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>  contributors, <a href="https://cyclosm.org/">CyclOSM</a>',
       minZoom: 0,
       maxZoom: 20,
     }
   );
+
+export const createCycleMapTileLayer = (
+  leaflet: LeafletModuleType
+): TileLayer =>
+  leaflet.tileLayer(
+    `https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=0a82ca6f08ab4253a9cc6cba516a620a`,
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>  contributors, <a href="https://www.opencyclemap.org/">OpenCycleMap</a>',
+      minZoom: 0,
+      maxZoom: 20,
+    }
+  );
+
+export const createTransportMapTileLayer = (
+  leaflet: LeafletModuleType
+): TileLayer =>
+  leaflet.tileLayer(
+    `https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=0a82ca6f08ab4253a9cc6cba516a620a`,
+    {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>  contributors, <a href="https://www.opencyclemap.org/">OpenCycleMap</a>',
+      minZoom: 0,
+      maxZoom: 20,
+    }
+  );
+
+export const createHotMapTileLayer = (leaflet: LeafletModuleType): TileLayer =>
+  leaflet.tileLayer(`https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png`, {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    minZoom: 0,
+    maxZoom: 20,
+  });
