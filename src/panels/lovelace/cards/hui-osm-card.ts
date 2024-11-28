@@ -423,9 +423,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // });
 
     // get coordinates 
-    const coordinates = await this.hass.callService("open_street_map", "get_address_coordinates", {
-      query: searchterm,
-    });
+    const coordinates = await this.hass.callService(
+      "open_street_map", 
+      "get_address_coordinates", 
+      {
+        device_id: "open_street_map",
+        query: searchterm,
+      }
+    );
 
     if (coordinates.error) {
       console.error(new Error("Error fetching coordinates:", coordinates.error));
@@ -441,6 +446,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
     // Call the "search" service if needed
     // const results = await this.hass.callService("open_street_map", "search", {
+    //   device_id: "open_street_map",
     //   query: searchterm,
     // });
     // console.log("Search results:", results);
