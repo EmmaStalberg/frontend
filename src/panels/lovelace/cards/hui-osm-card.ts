@@ -423,19 +423,25 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // });
 
     // get coordinates 
-    const coordinates = await this.hass.callService(
-      "open_street_map", 
-      "get_address_coordinates", 
-      {
-        device_id: "open_street_map",
-        query: searchterm,
-      }
-    );
-
-    if (coordinates.error) {
-      console.error(new Error("Error fetching coordinates:", coordinates.error));
-      return;
+    let coordinates: any;
+    try {
+      coordinates = await this.hass.callService(
+        "open_street_map", 
+        "get_address_coordinates", 
+        {
+          device_id: "open_street_map",
+          query: searchterm,
+        }
+      );
+    } catch(error) {
+      console.log("Could not find coordinates", error)
     }
+    
+
+    // if (coordinates.error) {
+    //   console.error(new Error("Error fetching coordinates:", coordinates.error));
+    //   return;
+    // }
 
     // update map - center around it and add marker
     // const lat = 57.6915335;
