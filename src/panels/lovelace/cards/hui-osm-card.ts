@@ -289,7 +289,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     if (this.hasUpdated && this._configEntities?.length) {
       this._subscribeHistory();
     }
-    this.addEventListener("hass-connected", this._subscribeToEvents); // EMMA 
   }
 
   public disconnectedCallback() {
@@ -436,39 +435,38 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
           query: searchterm,
         }
       );
+      // update map - center around it and add marker
+      // const lat = 57.6915335;
+      // const lon = 11.9571416;
+      const lat = coordinates[0];
+      const lon = coordinates[1];
+      this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
     } catch(error) {
       console.log("Could not find coordinates", error)
     }
-
-    // update map - center around it and add marker
-    // const lat = 57.6915335;
-    // const lon = 11.9571416;
-    const lat = coordinates[0];
-    const lon = coordinates[1];
-    this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
   }
 
-  private _subscribeToEvents() {
-    if (!this.hass) {
-      console.error("Home Assistant instance not available.");
-      return;
-    }
+  // private _subscribeToEvents() {
+  //   if (!this.hass) {
+  //     console.error("Home Assistant instance not available.");
+  //     return;
+  //   }
 
-    // Subscribe to events from the backend
-    this.hass.connection.subscribeEvents(
-      (event) => this._handleBackendEvent(event),
-      "open_street_map_event" // Event type from the backend
-    );
-  }
+  //   // Subscribe to events from the backend
+  //   this.hass.connection.subscribeEvents(
+  //     (event) => this._handleBackendEvent(event),
+  //     "open_street_map_event" // Event type from the backend
+  //   );
+  // }
 
-  private _handleBackendEvent(event: any) {
-    console.log("Received event from backend:", event);
+  // private _handleBackendEvent(event: any) {
+  //   console.log("Received event from backend:", event);
 
-    if (event.data.type === "get_address_coordinates") {
-      const coordinates = event.data.coordinates;
-      console.log("Coordinates received:", coordinates);
-    }
-  }
+  //   if (event.data.type === "get_address_coordinates") {
+  //     const coordinates = event.data.coordinates;
+  //     console.log("Coordinates received:", coordinates);
+  //   }
+  // }
 
   private async _changeLayer(): Promise<void> {
     const response = await showMapLayerDialog(this, {});
