@@ -395,8 +395,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     if (!searchterm) return;
 
     // call service from core
-    const results = await this.hass.callService("openstreetmap", "search", {
-      query: searchterm,
+    // const results = await this.hass.callService("openstreetmap", "search", {
+    //  device_id: "open_street_map",
+    //  query: searchterm,
+    // });
+
+    const results = await this.hass.callWS({
+      type: "open_street_map/async_handle_search",
+      query,
     });
 
     // // Handle errors in some way
