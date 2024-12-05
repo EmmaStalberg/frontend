@@ -194,7 +194,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               id="search-bar"
               .hass=${this.hass}
               @value-changed=${this._handleSearchInputChange}
-              @keypress=${this._handleSearch}
+              @keypress=${this._handleSearchPressed}
               .label=${this.hass.localize(
                 "ui.panel.lovelace.editor.edit_card.search_cards"
               )}
@@ -384,7 +384,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._filter = ev.detail.value;
   }
 
-  private async _handleSearch(event: KeyboardEvent): Promise<void> {
+  private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
     console.log("ENTER IS PRESSED");
@@ -393,6 +393,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     const searchterm = this._filter?.trim()
     if (!searchterm) return;
     console.log("Searching for ", searchterm);
+
+    // NEW MAYBE JUST USE STATES HERE ????
 
     // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
     // await this.hass.callService("open_street_map", "search", {
@@ -424,26 +426,26 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // });
 
     // get coordinates 
-    let coordinates: any;
+    // let coordinates: any;
 
-    try {
-      coordinates = await this.hass.callService(
-        "open_street_map", 
-        "get_address_coordinates", 
-        {
-          device_id: "open_street_map",
-          query: searchterm,
-        }
-      );
-      // update map - center around it and add marker
-      // const lat = 57.6915335;
-      // const lon = 11.9571416;
-      const lat = coordinates[0];
-      const lon = coordinates[1];
-      this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
-    } catch(error) {
-      console.log("Could not find coordinates", error)
-    }
+    // try {
+    //   const coordinates = await this.hass.callService(
+    //     "open_street_map", 
+    //     "get_address_coordinates", 
+    //     {
+    //       device_id: "open_street_map",
+    //       query: searchterm,
+    //     }
+    //   );
+    //   // update map - center around it and add marker
+    //   // const lat = 57.6915335;
+    //   // const lon = 11.9571416;
+    //   const lat = coordinates[0];
+    //   const lon = coordinates[1];
+    //   this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
+    // } catch(error) {
+    //   console.log("Could not find coordinates", error)
+    // }
   }
 
   // private _subscribeToEvents() {
