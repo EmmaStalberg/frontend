@@ -50,11 +50,7 @@ class OpenStreetMapPanel extends LitElement {
         >
         </search-input> -->
       </ha-top-app-bar-fixed>
-      <ha-osm
-          .hass=${this.hass}
-          autoFit
-          interactiveZones
-        ></ha-osm>
+      <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm>
     `;
   }
 

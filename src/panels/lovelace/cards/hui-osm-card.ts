@@ -89,7 +89,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
-  @state() private _filter?: string; 
+  @state() private _filter?: string;
 
   public setConfig(config: MapCardConfig): void {
     if (!config) {
@@ -191,14 +191,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             renderPassive
           ></ha-osm>
           <search-input-outlined
-              id="search-bar"
-              .hass=${this.hass}
-              @value-changed=${this._handleSearchInputChange}
-              @keypress=${this._handleSearch}
-              .label=${this.hass.localize(
-                "ui.panel.lovelace.editor.edit_card.search_cards"
-              )}
-            ></search-input-outlined>  
+            id="search-bar"
+            .hass=${this.hass}
+            @value-changed=${this._handleSearchInputChange}
+            @keypress=${this._handleSearch}
+            .label=${this.hass.localize(
+              "ui.panel.lovelace.editor.edit_card.search_cards"
+            )}
+          ></search-input-outlined>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -388,8 +388,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     if (event.key !== "Enter") return;
 
     console.log("ENTER IS PRESSED");
-    
-    const searchterm = this._filter?.trim()
+
+    const searchterm = this._filter?.trim();
     if (!searchterm) return;
     console.log("Searching for ", searchterm);
 
@@ -422,18 +422,23 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     //   }
     // });
 
-    // get coordinates 
-    const coordinates = await this.hass.callService(
-      "open_street_map", 
-      "get_address_coordinates", 
-      {
-        device_id: "open_street_map",
+    // get coordinates
+    await this.hass
+      .callWS({
+        type: "osm/event/search",
         query: searchterm,
-      }
-    );
+      })
+      .then((response) => {
+        console.log("Response from server:", response);
+      })
+      .catch((error) => {
+        console.error("WebSocket error:", error);
+      });
 
     if (coordinates.error) {
-      console.error(new Error("Error fetching coordinates:", coordinates.error));
+      console.error(
+        new Error("Error fetching coordinates:", coordinates.error)
+      );
       return;
     }
 
@@ -442,7 +447,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // const lon = 11.9571416;
     const lat = coordinates[0];
     const lon = coordinates[1];
-    this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
+    this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
 
     // Call the "search" service if needed
     // const results = await this.hass.callService("open_street_map", "search", {
@@ -631,9 +636,9 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
       search-input-outlined {
         position: absolute;
-          top: 10px;
-          right: 10px;
-          z-index: 10;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
       }
     `;
   }
