@@ -31,9 +31,8 @@ import { computeStateName } from "../../common/entity/compute_state_name";
 import type { HomeAssistant, ThemeMode } from "../../types";
 import { isTouch } from "../../util/is_touch";
 import "../ha-icon-button";
-import "../search-input"
+import "../search-input";
 import "./ha-entity-marker";
-
 
 const getEntityId = (entity: string | HaMapEntity): string =>
   typeof entity === "string" ? entity : entity.entity_id;
@@ -99,10 +98,12 @@ export class HaOSM extends ReactiveElement {
 
   private _mapPaths: Array<Polyline | CircleMarker> = [];
 
+  private markers: L.Marker[] = [];
+
   public connectedCallback(): void {
     super.connectedCallback();
     this._loadMap();
-    this._attachObserver();    
+    this._attachObserver();
   }
 
   public disconnectedCallback(): void {
@@ -154,7 +155,8 @@ export class HaOSM extends ReactiveElement {
     if (!this.leafletMap || !this.Leaflet || !this.hass) {
       return;
     }
-
+    this.markers.forEach((marker) => marker.remove());
+    this.markers.length = 0;
     if (!this._mapFocusItems.length && !this._mapFocusZones.length) {
       const map = this.leafletMap;
       map.locate({ setView: true, maxZoom: 13 });
@@ -179,7 +181,7 @@ export class HaOSM extends ReactiveElement {
     this.leafletMap.fitBounds(bounds, { maxZoom: options?.zoom || this.zoom });
   }
 
-  // Note! This works for one pair of coordinates. If one want to later make this work for several 
+  // Note! This works for one pair of coordinates. If one want to later make this work for several
   // coordinates at once, it needs to be updated similar to fitMap
   public fitMapToCoordinates(
     coordinates: LatLngTuple,
@@ -188,15 +190,16 @@ export class HaOSM extends ReactiveElement {
     if (!this.leafletMap || !this.Leaflet || !this.hass) {
       return;
     }
-  
+
     const [lat, lon] = coordinates;
-  
+
     this.leafletMap.setView(
       new this.Leaflet.LatLng(lat, lon),
       options?.zoom || this.zoom
     );
-  
-    this.Leaflet.marker([lat, lon]).addTo(this.leafletMap);
+
+    const marker1 = this.Leaflet.marker([lat, lon]).addTo(this.leafletMap);
+    this.markers.push(marker1);
   }
 
   public fitBounds(
@@ -532,7 +535,6 @@ export class HaOSM extends ReactiveElement {
 
     this._mapItems.forEach((marker) => map.addLayer(marker));
     this._mapZones.forEach((marker) => map.addLayer(marker));
-    
   }
 
   private async _attachObserver(): Promise<void> {

@@ -49,6 +49,7 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
+import { showAlertDialog } from "../custom-card-helpers";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -62,6 +63,18 @@ interface GeoEntity {
   entity_id: string;
   focus: boolean;
 }
+
+interface searchedLocation {
+  place_id: number;
+  osm_type: string;
+  osm_id: number;
+  lat: string;
+  lon: string;
+  addresstype: string;
+  name: string;
+  display_name: string;
+}
+type searchedLocationArray = searchedLocation[];
 
 @customElement("hui-osm-card")
 class HuiOSMCard extends LitElement implements LovelaceCard {
@@ -384,14 +397,47 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._filter = ev.detail.value;
   }
 
+  async fetchApiJson(url: string): Promise<any> {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const jsonData = await response.json();
+    return jsonData;
+  }
+
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
-    console.log("ENTER IS PRESSED");
+    // console.log("ENTER IS PRESSED");
 
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
-    console.log("Searching for ", searchterm);
+
+    this.fetchApiJson(
+      "https://nominatim.openstreetmap.org/search?q=" +
+        searchterm +
+        "&format=json&polygon=1&addressdetails=1"
+    )
+      .then((data) => {
+        const nodes = data.filter((item) => item.osm_type === "node");
+        if (nodes === null || nodes === undefined) {
+          showAlertDialog(this, {
+            title: "Oops, we can't find this place!",
+            text: "Please try a new place!",
+            warning: true,
+          });
+          return;
+        }
+        const latValues = nodes.map((node) => node.lat);
+        const lonValues = nodes.map((node) => node.lon);
+        this._map?.fitMapToCoordinates([Number(latValues), Number(lonValues)], {
+          zoom: 13,
+        });
+      })
+      .catch((error) => console.error(error));
 
     // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
     // await this.hass.callService("open_street_map", "search", {
@@ -423,31 +469,40 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // });
 
     // get coordinates
-    await this.hass
-      .callWS({
-        type: "osm/event/search",
-        query: searchterm,
-      })
-      .then((response) => {
-        console.log("Response from server:", response);
-      })
-      .catch((error) => {
-        console.error("WebSocket error:", error);
-      });
+    // await this.hass
+    //   .callWS({
+    //     type: "osm/event/search",
+    //     query: searchterm,
+    //   })
+    //   .then((response) => {
+    //     console.log("Response from server:", response);
+    //   })
+    //   .catch((error) => {
+    //     console.error("WebSocket error:", error);
+    //   });
 
-    if (coordinates.error) {
-      console.error(
-        new Error("Error fetching coordinates:", coordinates.error)
-      );
-      return;
-    }
+    // await this.hass
+    //   .callService("open_street_map", "search", { query: searchterm })
+    //   .then((response) => {
+    //     console.log("Response from server:", response);
+    //   })
+    //   .catch((error) => {
+    //     console.error("WebSocket error:", error);
+    //   });
+
+    // if (coordinates.error) {
+    //   console.error(
+    //     new Error("Error fetching coordinates:", coordinates.error)
+    //   );
+    //   return;
+    // }
 
     // update map - center around it and add marker
     // const lat = 57.6915335;
     // const lon = 11.9571416;
-    const lat = coordinates[0];
-    const lon = coordinates[1];
-    this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+    // const lat = coordinates[0];
+    // const lon = coordinates[1];
+    // this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
 
     // Call the "search" service if needed
     // const results = await this.hass.callService("open_street_map", "search", {
