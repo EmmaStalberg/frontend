@@ -155,6 +155,7 @@ export class HaOSM extends ReactiveElement {
     if (!this.leafletMap || !this.Leaflet || !this.hass) {
       return;
     }
+    // clear marker created from search
     this.markers.forEach((marker) => marker.remove());
     this.markers.length = 0;
     if (!this._mapFocusItems.length && !this._mapFocusZones.length) {
