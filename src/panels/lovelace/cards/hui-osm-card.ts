@@ -423,7 +423,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     )
       .then((data) => {
         const nodes = data.filter((item) => item.osm_type === "node");
-        if (nodes === null || nodes === undefined) {
+        if (nodes === null || nodes === undefined || nodes.length === 0) {
           showAlertDialog(this, {
             title: "Oops, we can't find this place!",
             text: "Please try a new place!",
