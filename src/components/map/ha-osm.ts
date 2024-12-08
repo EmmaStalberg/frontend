@@ -10,7 +10,7 @@ import type {
 } from "leaflet";
 import { TileLayer } from "leaflet";
 import type { CSSResultGroup, PropertyValues } from "lit";
-import { ReactiveElement, css, html } from "lit";
+import { ReactiveElement, css } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { formatDateTime } from "../../common/datetime/format_date_time";
 import {
@@ -19,7 +19,7 @@ import {
 } from "../../common/datetime/format_time";
 import type { LeafletModuleType } from "../../common/dom/setup-leaflet-map";
 import {
-  setupLeafletMap,
+  setupOSMMap,
   createCyclOSMTileLayer,
   createTileLayer,
   createCycleMapTileLayer,
@@ -144,11 +144,27 @@ export class HaOSM extends ReactiveElement {
     }
     this._loading = true;
     try {
-      [this.leafletMap, this.Leaflet, this.layer] = await setupLeafletMap(map);
+      [this.leafletMap, this.Leaflet, this.layer] = await setupOSMMap(map);
+      this._findCurrentLocation();
       this._loaded = true;
     } finally {
       this._loading = false;
     }
+  }
+
+  private _findCurrentLocation(): void {
+    const map = this.leafletMap;
+    const leaflet = this.Leaflet;
+    if (!map || !leaflet) return;
+    map.off("locationfound");
+    map.locate({ setView: true, maxZoom: 13 });
+    map.on("locationfound", (e: L.LocationEvent) => {
+      this.markers.forEach((marker) => marker.remove());
+      this.markers = [];
+      const newMarker = leaflet.marker(e.latlng).addTo(map);
+      this.markers.push(newMarker);
+      map.setView(e.latlng);
+    });
   }
 
   public fitMap(options?: { zoom?: number; pad?: number }): void {
@@ -156,14 +172,11 @@ export class HaOSM extends ReactiveElement {
       return;
     }
     // clear marker created from search
-    this.markers.forEach((marker) => marker.remove());
-    this.markers.length = 0;
     if (!this._mapFocusItems.length && !this._mapFocusZones.length) {
       const map = this.leafletMap;
+      if (!map) return;
+      // Re-trigger location detection
       map.locate({ setView: true, maxZoom: 13 });
-      map.on("locationfound", (e: L.LocationEvent) => {
-        map.setView(e.latlng);
-      });
       return;
     }
 
@@ -199,8 +212,8 @@ export class HaOSM extends ReactiveElement {
       options?.zoom || this.zoom
     );
 
-    const marker1 = this.Leaflet.marker([lat, lon]).addTo(this.leafletMap);
-    this.markers.push(marker1);
+    const foundAddress = this.Leaflet.marker([lat, lon]).addTo(this.leafletMap);
+    this.markers.push(foundAddress);
   }
 
   public fitBounds(
