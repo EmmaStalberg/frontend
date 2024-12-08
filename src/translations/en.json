@@ -1790,8 +1790,10 @@
         "humanitarian": "Humanitarian"
       },
       "map_search": {
-        "title": "Map Search", 
-        "search": "Search"
+        "title": "Map Navigation",
+        "search": "Search",
+        "input_from": "From",
+        "input_to": "To"
       },
       "matter-add-device": {
         "add_device": "Add device",

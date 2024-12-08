@@ -1,6 +1,6 @@
 import type { CSSResultGroup } from "lit";
 import { css, html, LitElement, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators";
+import { customElement, property, query, state } from "lit/decorators";
 import { fireEvent } from "../../common/dom/fire_event";
 import "../../components/ha-button";
 import type { HomeAssistant } from "../../types";
@@ -10,6 +10,8 @@ import type { UpdateMapSearchDialogParams } from "./show-dialog-map-search";
 import "../../components/ha-button-toggle-group";
 import "../../components/ha-icon-button-group";
 import "../../components/ha-icon-button-toggle";
+import "../../components/ha-textfield";
+import type { HaTextField } from "../../components/ha-textfield";
 
 @customElement("ha-map-search-dialog")
 export class MapSearchDialog extends LitElement {
@@ -17,48 +19,87 @@ export class MapSearchDialog extends LitElement {
 
   @state() private _dialogParams?: UpdateMapSearchDialogParams;
 
+  @query("#from") private _inputFrom?: HaTextField;
+
+  @query("#to") private _inputTo?: HaTextField;
+
   public showDialog(dialogParams: UpdateMapSearchDialogParams): void {
     this._dialogParams = dialogParams;
   }
 
-  public _dialogClosed(): void {
-    this.closeDialog();
-  }
-
   public closeDialog(): void {
-    if (!this._dialogParams) {
-      return;
-    }
     this._dialogParams = undefined;
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
+  private _submit(): void {
+    const valueFrom = this._inputFrom?.value ?? "";
+    // if (valueFrom === "") {
+    //   showAlertDialog(this, {
+    //     title: "Oops, the starting address is invalid!",
+    //     text: "Please tell us where you want to start!",
+    //     warning: true,
+    //   });
+    //   return;
+    // }
+    const valueTo = this._inputTo?.value ?? "";
+    // if (valueTo === "") {
+    //   showAlertDialog(this, {
+    //     title: "Oops, the destination is invalid!",
+    //     text: "Please tell us where you want to go!",
+    //     warning: true,
+    //   });
+    //   return;
+    // }
+
+    this._dialogParams?.submit?.([valueFrom, valueTo]);
+    this.closeDialog();
+  }
+
+  private _cancel(): void {
+    this._dialogParams?.cancel?.();
+    this.closeDialog();
+  }
+
   protected render() {
-    if (!this._dialogParams) {
+    if (!this._dialogParams || !this.hass) {
       return nothing;
     }
 
     return html`
       <ha-dialog
         open
-        @closed=${this._dialogClosed}
+        @closed=${this._cancel}
         escapeKeyAction
         .heading=${this.hass.localize("ui.dialogs.map_search.title")}
       >
-        <div class="actions">
-          <ha-button @click=${this._searchMap} style="color:#000000"
-            >${this.hass.localize("ui.dialogs.map_search.search")}
-          </ha-button>
-          >
+        <div id="textInput">
+          <ha-textfield
+            class="input"
+            dialogInitialFocus
+            id="from"
+            placeholder="If you want to start form current location, leave it blank."
+            .label=${this.hass.localize("ui.dialogs.map_search.input_from")}
+            type="text"
+            inputmode="text"
+          ></ha-textfield>
+          <ha-textfield
+            class="input"
+            id="to"
+            placeholder="If you want to reach current location, leave it blank."
+            .label=${this.hass.localize("ui.dialogs.map_search.input_to")}
+            type="text"
+            inputmode="text"
+          ></ha-textfield>
         </div>
+        <ha-button slot="secondaryAction" dialogAction="cancel">
+          ${this.hass.localize("ui.common.cancel")}
+        </ha-button>
+        <ha-button @click=${this._submit} slot="primaryAction">
+          ${this.hass.localize("ui.common.submit")}
+        </ha-button>
       </ha-dialog>
     `;
-  }
-
-  private _searchMap(): void {
-    // this._dialogParams?.confirm?.(STANDARD);
-    // handle search action 
-    this.closeDialog();
   }
 
   static get styles(): CSSResultGroup {
@@ -67,26 +108,20 @@ export class MapSearchDialog extends LitElement {
         margin: 0;
         color: var(--primary-text-color);
       }
+
       ha-dialog {
         /* Place above other dialogs */
         --dialog-z-index: 104;
+      }
+      ha-textfield {
+        width: 100%;
+        max-width: 300px;
+        margin: auto;
       }
       @media all and (min-width: 600px) {
         ha-dialog {
           --mdc-dialog-min-width: 400px;
         }
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        flex-direction: column;
-        justify-content: center;
-      }
-
-      ha-button {
-        color: #000000;
-        font-size: 16px;
       }
     `;
   }
@@ -94,6 +129,6 @@ export class MapSearchDialog extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "ha-map-search-dialog": MapLayerDialog;
+    "ha-map-search-dialog": MapSearchDialog;
   }
 }

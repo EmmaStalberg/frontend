@@ -50,6 +50,7 @@ import {
   TRANSPORTMAP,
 } from "../../../data/map_layer";
 import { showAlertDialog } from "../custom-card-helpers";
+import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -198,6 +199,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               @input=${this._handleSearchInputChange}
             />
             <button @click=${this._handleSearch}>Search</button>
+            <button @click=${this._openNavigationDiaglog}>Navigation</button>
           </div>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
@@ -426,6 +428,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       })
       // eslint-disable-next-line no-console
       .catch((error) => console.error(error));
+  }
+
+  private async _openNavigationDiaglog(): Promise<void> {
+    const response = await showMapSearchDialog(this, {});
+    if (!response) return;
+    if (response[0] === "") {
+      // todo
+    }
   }
 
   private async _changeLayer(): Promise<void> {
