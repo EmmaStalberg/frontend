@@ -50,6 +50,8 @@ import {
   TRANSPORTMAP,
 } from "../../../data/map_layer";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
+import { showConfirmationDialog } from "../custom-card-helpers";
+import { fireEvent } from "../../../common/dom/fire_event";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -374,7 +376,24 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   }
 
   private _shareLocation() {
-    // TODO
+    const currentUrl = window.location.href; // Get the current page URL
+    showConfirmationDialog(this, {
+      title: "Share Location",
+      text: `${currentUrl}`,
+      confirm: async () => {
+        try {
+          await navigator.clipboard.writeText(currentUrl); // Copy URL to clipboard
+          showConfirmationDialog(this, {
+            title: "Share Location",
+            text: "The URL has been copied to your clipboard!",
+            confirmText: "OK",
+          });
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error("Failed to copy URL:", error);
+        }
+      },
+    });
   }
 
   private _handleSearchInputChange(ev: CustomEvent) {
