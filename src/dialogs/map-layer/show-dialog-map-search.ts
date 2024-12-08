@@ -11,7 +11,7 @@ export const showMapSearchDialog = (
   dialogParams: UpdateMapSearchDialogParams
 ) =>
   new Promise<[string, string] | null>((resolve) => {
-    const origConfirm = dialogParams.submit;
+    const origSubmit = dialogParams.submit;
     const origCancel = dialogParams.cancel;
 
     fireEvent(element, "show-dialog", {
@@ -25,10 +25,10 @@ export const showMapSearchDialog = (
             origCancel();
           }
         },
-        confirm: (locationInfo: [string, string]) => {
+        submit: (locationInfo: [string, string]) => {
           resolve(locationInfo);
-          if (origConfirm) {
-            origConfirm(locationInfo);
+          if (origSubmit) {
+            origSubmit(locationInfo);
           }
         },
       },

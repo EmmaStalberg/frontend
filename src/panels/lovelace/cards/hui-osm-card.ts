@@ -2,7 +2,7 @@ import {
   mdiImageFilterCenterFocus,
   mdiLayersTriple,
   mdiShare,
-  mdiNotePlusOutline,
+  mdiNearMe,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
 import type { LatLngTuple } from "leaflet";
@@ -49,7 +49,6 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-import { showAlertDialog } from "../custom-card-helpers";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
@@ -192,15 +191,15 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             interactiveZones
             renderPassive
           ></ha-osm>
-          <div id="search-input-outlined">
-            <input
-              type="text"
-              placeholder="Search..."
-              @input=${this._handleSearchInputChange}
-            />
-            <button @click=${this._handleSearch}>Search</button>
-            <button @click=${this._openNavigationDiaglog}>Navigation</button>
-          </div>
+          <search-input-outlined
+            id="search-bar"
+            .hass=${this.hass}
+            @value-changed=${this._handleSearchInputChange}
+            @keypress=${this._handleSearch}
+            .label=${this.hass.localize(
+              "ui.panel.lovelace.editor.edit_card.search_cards"
+            )}
+          ></search-input-outlined>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -228,11 +227,11 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             ></ha-icon-button-toggle>
             <ha-icon-button-toggle
               .label=${this.hass.localize(
-                `ui.panel.lovelace.cards.map.add_a_note`
+                `ui.panel.lovelace.cards.map.navigation`
               )}
-              .path=${mdiNotePlusOutline}
+              .path=${mdiNearMe}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-              @click=${this._addNode}
+              @click=${this._openNavigationDialog}
             ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
@@ -378,23 +377,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // TODO
   }
 
-  private _addNode() {
-    // TODO
-  }
-
   private _handleSearchInputChange(ev: CustomEvent) {
     this._filter = ev.detail.value;
-  }
-
-  async fetchApiJson(url: string): Promise<any> {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const jsonData = await response.json();
-    return jsonData;
   }
 
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
@@ -404,38 +388,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
-
-    this.fetchApiJson(
-      "https://nominatim.openstreetmap.org/search?q=" +
-        searchterm +
-        "&format=json&polygon=1&addressdetails=1"
-    )
-      .then((data) => {
-        const nodes = data.filter((item) => item.osm_type === "node");
-        if (nodes === null || nodes === undefined || nodes.length === 0) {
-          showAlertDialog(this, {
-            title: "Oops, we can't find this place!",
-            text: "Please try a new place!",
-            warning: true,
-          });
-          return;
-        }
-        const latValues = nodes.map((node) => node.lat);
-        const lonValues = nodes.map((node) => node.lon);
-        this._map?.fitMapToCoordinates([Number(latValues), Number(lonValues)], {
-          zoom: 13,
-        });
-      })
-      // eslint-disable-next-line no-console
-      .catch((error) => console.error(error));
+    this._map?._handleSearchAction(searchterm);
   }
 
-  private async _openNavigationDiaglog(): Promise<void> {
+  private async _openNavigationDialog(): Promise<void> {
     const response = await showMapSearchDialog(this, {});
     if (!response) return;
-    if (response[0] === "") {
-      // todo
-    }
+    this._map?._handleNavigationAction(response[0], response[1]);
   }
 
   private async _changeLayer(): Promise<void> {
@@ -615,7 +574,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
         height: 100%;
       }
 
-      #search-input-outlined {
+      search-input-outlined {
         position: absolute;
         top: 10px;
         right: 10px;
