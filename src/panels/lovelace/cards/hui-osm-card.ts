@@ -64,18 +64,6 @@ interface GeoEntity {
   focus: boolean;
 }
 
-interface searchedLocation {
-  place_id: number;
-  osm_type: string;
-  osm_id: number;
-  lat: string;
-  lon: string;
-  addresstype: string;
-  name: string;
-  display_name: string;
-}
-type searchedLocationArray = searchedLocation[];
-
 @customElement("hui-osm-card")
 class HuiOSMCard extends LitElement implements LovelaceCard {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -203,15 +191,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             interactiveZones
             renderPassive
           ></ha-osm>
-          <search-input-outlined
-            id="search-bar"
-            .hass=${this.hass}
-            @value-changed=${this._handleSearchInputChange}
-            @keypress=${this._handleSearch}
-            .label=${this.hass.localize(
-              "ui.panel.lovelace.editor.edit_card.search_cards"
-            )}
-          ></search-input-outlined>
+          <div id="search-input-outlined">
+            <input
+              type="text"
+              placeholder="Search..."
+              @input=${this._handleSearchInputChange}
+            />
+            <button @click=${this._handleSearch}>Search</button>
+          </div>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -437,79 +424,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
           zoom: 13,
         });
       })
+      // eslint-disable-next-line no-console
       .catch((error) => console.error(error));
-
-    // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
-    // await this.hass.callService("open_street_map", "search", {
-    //   query: searchterm,
-    // });
-
-    // ANOTHER TRY, MIGHT NOT USE
-    // this.hass.bus.on("open_street_map_event", (event) => {
-    //   const { error, results, coordinates } = event.detail;
-
-    //   if (error) {
-    //       console.error("Search Error:", error);
-    //       return;
-    //   }
-
-    //   // Center map around given coordinates retreived from search
-    //   if (coordinates) {
-    //       const [lat, lon] = coordinates;
-    //       this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
-    //       console.log("Coordinates found:", lat, lon);
-    //   }
-
-    //   // THIS IS FOR WHEN ADDING THE ENTRE RESULT,
-    //   // BUT MIGHT NEED TO BE IN ANOTHER {}
-    //   if (results) {
-    //       // Handle displaying results, for example, a list of addresses
-    //       console.log("Search results:", results);
-    //   }
-    // });
-
-    // get coordinates
-    // await this.hass
-    //   .callWS({
-    //     type: "osm/event/search",
-    //     query: searchterm,
-    //   })
-    //   .then((response) => {
-    //     console.log("Response from server:", response);
-    //   })
-    //   .catch((error) => {
-    //     console.error("WebSocket error:", error);
-    //   });
-
-    // await this.hass
-    //   .callService("open_street_map", "search", { query: searchterm })
-    //   .then((response) => {
-    //     console.log("Response from server:", response);
-    //   })
-    //   .catch((error) => {
-    //     console.error("WebSocket error:", error);
-    //   });
-
-    // if (coordinates.error) {
-    //   console.error(
-    //     new Error("Error fetching coordinates:", coordinates.error)
-    //   );
-    //   return;
-    // }
-
-    // update map - center around it and add marker
-    // const lat = 57.6915335;
-    // const lon = 11.9571416;
-    // const lat = coordinates[0];
-    // const lon = coordinates[1];
-    // this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
-
-    // Call the "search" service if needed
-    // const results = await this.hass.callService("open_street_map", "search", {
-    //   device_id: "open_street_map",
-    //   query: searchterm,
-    // });
-    // console.log("Search results:", results);
   }
 
   private async _changeLayer(): Promise<void> {
@@ -689,7 +605,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
         height: 100%;
       }
 
-      search-input-outlined {
+      #search-input-outlined {
         position: absolute;
         top: 10px;
         right: 10px;

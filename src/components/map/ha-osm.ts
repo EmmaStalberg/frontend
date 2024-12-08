@@ -33,6 +33,8 @@ import { isTouch } from "../../util/is_touch";
 import "../ha-icon-button";
 import "../search-input";
 import "./ha-entity-marker";
+import type { OpenStreetMapPlace } from "../../data/openstreetmap";
+import { reverseGeocode } from "../../data/openstreetmap";
 
 const getEntityId = (entity: string | HaMapEntity): string =>
   typeof entity === "string" ? entity : entity.entity_id;
@@ -100,6 +102,11 @@ export class HaOSM extends ReactiveElement {
 
   private markers: L.Marker[] = [];
 
+  @state()
+  private _location: [number, number] = [57.7072326, 11.9670171];
+
+  @state() private _places?: OpenStreetMapPlace[] | null;
+
   public connectedCallback(): void {
     super.connectedCallback();
     this._loadMap();
@@ -161,10 +168,20 @@ export class HaOSM extends ReactiveElement {
     map.on("locationfound", (e: L.LocationEvent) => {
       this.markers.forEach((marker) => marker.remove());
       this.markers = [];
+      this._location = [Number(e.latlng.lat), Number(e.latlng.lng)];
       const newMarker = leaflet.marker(e.latlng).addTo(map);
       this.markers.push(newMarker);
       map.setView(e.latlng);
     });
+  }
+
+  private async _reverseGeocode() {
+    if (!this._location) {
+      return;
+    }
+    this._places = null;
+    const reverse = await reverseGeocode(this._location, this.hass);
+    this._places = [reverse];
   }
 
   public fitMap(options?: { zoom?: number; pad?: number }): void {
