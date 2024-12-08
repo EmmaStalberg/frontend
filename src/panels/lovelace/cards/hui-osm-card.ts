@@ -388,13 +388,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
-    this._map?._handleSearchAction(searchterm);
+    await this._map?._handleSearchAction(searchterm);
   }
 
   private async _openNavigationDialog(): Promise<void> {
     const response = await showMapSearchDialog(this, {});
     if (!response) return;
-    this._map?._handleNavigationAction(response[0], response[1]);
+    await this._map?._handleNavigationAction(response[0], response[1]);
   }
 
   private async _changeLayer(): Promise<void> {

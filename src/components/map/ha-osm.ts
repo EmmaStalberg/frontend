@@ -283,13 +283,20 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
-  public _handleSearchAction(searchterm: string) {
+  public async _handleSearchAction(searchterm: string) {
     if (!searchterm) return;
-    const latAndLon = this._fetchCoordinates(searchterm);
+    const latAndLon = await this._fetchCoordinates(searchterm);
     if (!latAndLon) return;
-    this.fitMapToCoordinates([latAndLon[0], latAndLon[1]], {
-      zoom: 13,
-    });
+    const leaflet = this.Leaflet;
+    const map = this.leafletMap;
+    if (!map || !leaflet) return;
+    map.setView([latAndLon[0], latAndLon[1]], this.zoom);
+    // Clear previoud markers
+    this._clearRouteLayer();
+    const foundAddress = leaflet
+      .marker([latAndLon[0], latAndLon[1]])
+      .addTo(map);
+    this.markers.push(foundAddress);
   }
 
   private _clearRouteLayer() {
@@ -387,7 +394,7 @@ export class HaOSM extends ReactiveElement {
     const map = this.leafletMap;
     if (!map || !leaflet) return;
     const _icon = leaflet.icon({
-      iconUrl: "https://img.icons8.com/bubbles/100/restaurant.png", // Restaurant icon
+      iconUrl: "https://img.icons8.com/glyph-neue/64/meal.png", // Restaurant icon
       iconSize: [25, 25],
       iconAnchor: [12, 25],
       popupAnchor: [0, -20],
