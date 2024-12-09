@@ -91,6 +91,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   @state() private _filter?: string; 
 
+  @state() private _coordinates: [number, number] | null = null;
+
   public setConfig(config: MapCardConfig): void {
     if (!config) {
       throw new Error("Error in card configuration.");
@@ -331,7 +333,15 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     }
   }
 
+
+  private _updateMap(coordinates: [number, number]) {
+    const [lat, lon] = coordinates;
+    console.log("Updating map with new coordinates:", lat, lon);
+    this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+  }
+
   protected updated(changedProps: PropertyValues): void {
+    super.updated(changedProps)
     if (this._configEntities?.length) {
       if (!this._subscribed || changedProps.has("_config")) {
         this._unsubscribeHistory();
@@ -428,24 +438,29 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // get coordinates 
     // let coordinates: any;
 
-    // try {
-    //   const coordinates = await this.hass.callService(
-    //     "open_street_map", 
-    //     "get_address_coordinates", 
-    //     {
-    //       device_id: "open_street_map",
-    //       query: searchterm,
-    //     }
-    //   );
-    //   // update map - center around it and add marker
-    //   // const lat = 57.6915335;
-    //   // const lon = 11.9571416;
-    //   const lat = coordinates[0];
-    //   const lon = coordinates[1];
-    //   this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
-    // } catch(error) {
-    //   console.log("Could not find coordinates", error)
-    // }
+    try {
+      const coordinates = await this.hass.callService(
+        "open_street_map", 
+        "get_address_coordinates", 
+        {
+          // entity_id: "zone.home",
+          query: searchterm,
+        }
+      );
+      // update map - center around it and add marker
+      // const lat = 57.6915335;
+      // const lon = 11.9571416;
+      if (coordinates) {
+        this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
+      }
+      console.log("the response json is  ", JSON.stringify(coordinates))
+      console.log("coordinates are ", coordinates)
+      const lat = coordinates[0];
+      const lon = coordinates[1];
+      this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
+    } catch(error) {
+      console.log("Could not find coordinates", error)
+    }
   }
 
   // private _subscribeToEvents() {
