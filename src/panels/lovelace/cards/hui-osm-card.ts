@@ -13,6 +13,7 @@ import memoizeOne from "memoize-one";
 import { getColorByIndex } from "../../../common/color/colors";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import { computeDomain } from "../../../common/entity/compute_domain";
+import { computeStateDomain } from "../../../common/entity/compute_state_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import { deepEqual } from "../../../common/util/deep-equal";
 import parseAspectRatio from "../../../common/util/parse-aspect-ratio";
@@ -29,7 +30,7 @@ import type {
 } from "../../../components/map/ha-osm";
 import type { HistoryStates } from "../../../data/history";
 import { subscribeHistoryStatesTimeWindow } from "../../../data/history";
-import type { HomeAssistant } from "../../../types";
+import type { HomeAssistant, ServiceCallRequest, ServiceCallResponse } from "../../../types";
 import { findEntities } from "../common/find-entities";
 import {
   hasConfigChanged,
@@ -394,14 +395,27 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._filter = ev.detail.value;
   }
 
-  public hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
-    const subs = this.hass.connection.subscribeMessage((message) => {
-      if (message.type === "open_street_map/async_get_address_coordinates") {
-        const { coords } = message;
-        this._map?.fitMapToCoordinates([coords.lat, coords.lon]);
-      }
-    }, { type: "open_street_map/get_coordinates", query: searchTerm })
-  }  
+  public async CallServiceWithResponse(serviceRequest: ServiceCallRequest): Promise<string> {
+    try {
+      // call the service as a script.
+      const serviceResponse = await this.hass.connection.sendMessagePromise<ServiceCallResponse>({
+        type: "execute_script",
+        sequence: [{
+          "service": serviceRequest.domain + "." + serviceRequest.service,
+          "data": serviceRequest.serviceData,
+          "target": serviceRequest.target,
+          "response_variable": "service_result"
+        },
+        {
+          "stop": "done",
+          "response_variable": "service_result"
+        }]
+      });
+      // return the service response data or an empty dictionary if no response data was generated.
+      return JSON.stringify(serviceResponse.response)
+
+    } finally { /* empty */ }
+  }
 
   private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
@@ -412,6 +426,26 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     const searchterm = this._filter?.trim()
     if (!searchterm) return;
     console.log("Searching for ", searchterm);
+
+    const entityId = Object.values(this.hass.states).find(
+      (stateObj) => 
+        computeStateDomain(stateObj) === "open_street_map"
+    )?.entity_id;
+
+    const get_address_coordinates_event = (
+      hass: HomeAssistant,
+      entityId: string | undefined,
+      searchTerm: string
+    ) =>
+      hass.callWS<void>({
+        type: "open_street_map/async_get_address_coordinates",
+        entity_id: entityId,
+        query: searchTerm
+    });
+
+    try {
+      await get_address_coordinates_event(this.hass, entityId, searchterm)
+    }
 
     // NEW MAYBE JUST USE STATES HERE ????
 
