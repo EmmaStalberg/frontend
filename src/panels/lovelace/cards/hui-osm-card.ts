@@ -394,6 +394,15 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._filter = ev.detail.value;
   }
 
+  public hassSubscribe(): Array<UnsubscribeFunc | Promise<UnsubscribeFunc>> {
+    const subs = this.hass.connection.subscribeMessage((message) => {
+      if (message.type === "open_street_map/async_get_address_coordinates") {
+        const { coords } = message;
+        this._map?.fitMapToCoordinates([coords.lat, coords.lon]);
+      }
+    }, { type: "open_street_map/get_coordinates", query: searchTerm })
+  }  
+
   private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
