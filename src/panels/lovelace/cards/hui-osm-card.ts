@@ -50,6 +50,7 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
+import { logger } from "workbox-core/_private";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -432,20 +433,44 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
         computeStateDomain(stateObj) === "open_street_map"
     )?.entity_id;
 
-    const get_address_coordinates_event = (
-      hass: HomeAssistant,
-      entityId: string | undefined,
-      searchTerm: string
-    ) =>
-      hass.callWS<void>({
-        type: "open_street_map/async_get_address_coordinates",
-        entity_id: entityId,
-        query: searchTerm
-    });
-
+    // try using the separate service call requst handler 
     try {
-      await get_address_coordinates_event(this.hass, entityId, searchterm)
+      // create service request.
+      const serviceRequest: ServiceCallRequest = {
+        domain: "open_street_map",
+        service: 'get_address_coordinates',
+        serviceData: {
+          entity_id: entityId,
+          query: searchterm,
+        }
+      };
+
+      // call the service, and convert the response to a type.
+      const response = await this.CallServiceWithResponse(serviceRequest);
+      console.log("the coords from special call are ", response)
+
+      // if it works, add map updates here 
+
+    } finally {
+      /** empty */
     }
+
+    // const get_address_coordinates_event = (
+    //   hass: HomeAssistant,
+    //   entity_id: string | undefined,
+    //   searchTerm: string
+    // ) =>
+    //   hass.callWS<void>({
+    //     type: "open_street_map/async_get_address_coordinates",
+    //     entity_id: entity_id,
+    //     query: searchTerm
+    // });
+
+    // try {
+    //   await get_address_coordinates_event(this.hass, entityId, searchterm)
+    // } finally {
+    //   /** empty */
+    // }
 
     // NEW MAYBE JUST USE STATES HERE ????
 
