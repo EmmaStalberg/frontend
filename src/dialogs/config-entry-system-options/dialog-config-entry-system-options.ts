@@ -11,7 +11,7 @@ import type { ConfigEntryMutableParams } from "../../data/config_entries";
 import { updateConfigEntry } from "../../data/config_entries";
 import { haStyleDialog } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
-import { showAlertDialog } from "../generic/show-dialog-box";
+import {} from "../generic/show-dialog-box";
 import type { ConfigEntrySystemOptionsDialogParams } from "./show-dialog-config-entry-system-options";
 
 @customElement("dialog-config-entry-system-options")

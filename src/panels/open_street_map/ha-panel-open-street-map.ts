@@ -22,8 +22,6 @@ class OpenStreetMapPanel extends LitElement {
 
   @property({ type: Object }) public panel?: { config: object };
 
-  @state() private _filter?: string; // EMMA
-
   protected render() {
     return html`
       <ha-top-app-bar-fixed class="top-bar">
@@ -41,20 +39,8 @@ class OpenStreetMapPanel extends LitElement {
               @click=${this._openZonesEditor}
             ></ha-icon-button>`
           : ""}
-        <!-- <search-input
-          slot="actionItems"
-          .hass=${this.hass}
-          .filter=${this._filter}
-          @value-changed=${this._handleSearch}
-          style="background: white; border-radius: 5px; padding: 5px;"
-        >
-        </search-input> -->
       </ha-top-app-bar-fixed>
-      <ha-osm
-          .hass=${this.hass}
-          autoFit
-          interactiveZones
-        ></ha-osm>
+      <ha-osm .hass=${this.hass} autoFit interactiveZones></ha-osm>
     `;
   }
 
