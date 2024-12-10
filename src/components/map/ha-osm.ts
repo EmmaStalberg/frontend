@@ -105,6 +105,8 @@ export class HaOSM extends ReactiveElement {
 
   private _routeLayer: L.GeoJSON | null = null;
 
+  private noteMarkers: L.Marker[] = [];
+
   @state()
   private _location: [number, number] = [57.7072326, 11.9670171];
 
@@ -277,6 +279,7 @@ export class HaOSM extends ReactiveElement {
   }
 
   public async _handleSearchAction(searchterm: string) {
+    // Search action
     if (!searchterm) return;
     const latAndLon = await this._fetchCoordinates(searchterm);
     if (!latAndLon) return;
@@ -302,7 +305,80 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  public _handleAddANote() {
+    const map = this.leafletMap;
+    const leaflet = this.Leaflet;
+    if (!map || !leaflet) return;
+
+    // Create a red marker icon
+    const redIcon = leaflet.icon({
+      iconUrl: "https://img.icons8.com/ios-filled/50/FA5252/marker.png", // URL for red marker icon
+      iconSize: [35, 41], // Size of the icon
+      iconAnchor: [12, 41], // Anchor point of the icon
+      popupAnchor: [1, -34], // Anchor point of the popup relative to the icon
+    });
+
+    // Create a marker at the center of the map
+    const initialLatLng = map.getCenter();
+    const noteMarker = leaflet
+      .marker(initialLatLng, { icon: redIcon, draggable: true }) // Make the marker draggable
+      .addTo(map);
+
+    // Bind popup to the marker
+    noteMarker
+      .bindPopup(
+        `
+        <div>
+          <strong>Note:</strong><br/>
+          Drag this marker to the desired location.<br/>
+          <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
+        </div>
+      `
+      )
+      .openPopup();
+
+    // Add the marker to the noteMarkers array for tracking
+    this.noteMarkers.push(noteMarker);
+
+    // Add click event to remove the marker
+    noteMarker.on("popupopen", () => {
+      // Add event listener for the "Remove Note" button
+      const popupContent = noteMarker.getPopup()?.getElement();
+      if (!popupContent) {
+        // eslint-disable-next-line no-console
+        console.error("Popup content not found");
+        return;
+      }
+
+      const removeButton = popupContent.querySelector(
+        "#remove-note"
+      ) as HTMLElement;
+      if (!removeButton) {
+        // eslint-disable-next-line no-console
+        console.error("Remove button not found in popup");
+        return;
+      }
+
+      // Add event listener for the "Remove Note" button
+      removeButton.addEventListener("click", () => {
+        // Remove the marker from the map and the array
+        map.removeLayer(noteMarker);
+        this.noteMarkers = this.noteMarkers.filter(
+          (marker) => marker !== noteMarker
+        );
+      });
+    });
+
+    // Add dragend event to update marker position
+    noteMarker.on("dragend", () => {
+      const { lat, lng } = noteMarker.getLatLng();
+      // eslint-disable-next-line no-console
+      console.log(`Marker moved to: ${lat}, ${lng}`);
+    });
+  }
+
   public async _handleNavigationAction(
+    // Show direction function
     startPoint: string,
     endPoint: string,
     transportMode: string
@@ -356,7 +432,6 @@ export class HaOSM extends ReactiveElement {
       const startMarker = leaflet.marker(startLatlon).addTo(map);
       startMarker.bindPopup("Start Point").openPopup();
       const endMarker = leaflet.marker(endLatlon).addTo(map);
-
       endMarker.bindPopup(this._showEndpointPopup(distance, duration));
       this.markers.push(startMarker);
       this.markers.push(endMarker);
@@ -396,7 +471,7 @@ export class HaOSM extends ReactiveElement {
 
     return `
       <div>
-        <strong>Route Info</strong><br/>
+        <strong>End point</strong><br/>
         Distance: ${formattedDistance}<br/>
         Duration: ${formattedDuration}
       </div>
