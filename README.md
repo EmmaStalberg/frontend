@@ -16,7 +16,7 @@ views:
     title: Open Street Map
     icon: mdi:map
     cards:
-      - type: map
+      - type: osm
         auto_fit: true
         entities:
           - zone.home
