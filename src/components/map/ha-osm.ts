@@ -36,6 +36,7 @@ import "./ha-entity-marker";
 import type { OpenStreetMapPlace } from "../../data/openstreetmap";
 import { reverseGeocode } from "../../data/openstreetmap";
 import { showAlertDialog } from "../../panels/lovelace/custom-card-helpers";
+import { showToast } from "../../util/toast";
 
 const getEntityId = (entity: string | HaMapEntity): string =>
   typeof entity === "string" ? entity : entity.entity_id;
@@ -405,6 +406,12 @@ export class HaOSM extends ReactiveElement {
         return; // Exit if end coordinates couldn't be fetched
       }
     }
+    if (startLatlon === endLatlon) {
+      showToast(this, {
+        message: "Please provide a valid destination!",
+      });
+      return;
+    }
 
     try {
       // const route = await this._fetchRoute(
@@ -511,7 +518,6 @@ export class HaOSM extends ReactiveElement {
 
       marker.on("click", async () => {
         const details = await this._showRestaurantDetails(
-          restaurant.type,
           restaurant.lat,
           restaurant.lon
         );
@@ -522,19 +528,10 @@ export class HaOSM extends ReactiveElement {
     });
   }
 
-  private async _showRestaurantDetails(
-    type: string,
-    lat: number,
-    lon: number
-  ): Promise<any> {
+  private async _showRestaurantDetails(lat: number, lon: number): Promise<any> {
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?nodetype=${type}&lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch restaurant details");
-      }
-
-      const details = await response.json();
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
+      const details = await this.fetchApiJson(url);
       return details;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -574,10 +571,9 @@ export class HaOSM extends ReactiveElement {
     const [lat, lon] = location;
     try {
       // Query restaurants within a 500m radius (adjust as needed)
-      const response = await fetch(
+      const data = await this.fetchApiJson(
         `https://overpass-api.de/api/interpreter?data=[out:json];node["amenity"="restaurant"](around:500,${lat},${lon});out;`
       );
-      const data = await response.json();
 
       // Limit the number of restaurants to `count`
       return data.elements.slice(0, count);
@@ -601,10 +597,9 @@ export class HaOSM extends ReactiveElement {
           : "foot";
     const [startLat, startLon] = start;
     const [endLat, endLon] = end;
-    const response = await fetch(
+    const data = await this.fetchApiJson(
       `https://router.project-osrm.org/route/v1/${transport_mode}/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`
     );
-    const data = await response.json();
 
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];

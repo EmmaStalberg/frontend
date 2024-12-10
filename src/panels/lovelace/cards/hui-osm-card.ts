@@ -423,6 +423,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   }
 
   private async _openNavigationDialog(): Promise<void> {
+    // Direction
     const response = await showMapSearchDialog(this, {});
     if (!response) return;
     await this._map?._handleNavigationAction(
