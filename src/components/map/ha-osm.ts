@@ -255,13 +255,6 @@ export class HaOSM extends ReactiveElement {
       const data = await this.fetchApiJson(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchterm)}&format=json&polygon=1&addressdetails=1`
       );
-
-      // Filter nodes
-      // const nodes = data.filter(
-      //   (item) => item.osm_type === "node" || item.addresstype === "city"
-      // );
-
-      // Check if nodes are empty
       if (!data || data.length === 0) {
         showAlertDialog(this, {
           title: "Oops, we can't find this place!",
@@ -365,8 +358,8 @@ export class HaOSM extends ReactiveElement {
         5
       );
 
-      this._addRestaurantMarkers(startRestaurants);
-      this._addRestaurantMarkers(endRestaurants);
+      this._addRestaurantMarkersWithDetails(startRestaurants);
+      this._addRestaurantMarkersWithDetails(endRestaurants);
       this._routeLayer.on("click", (e: any) =>
         this._handleRouteClick(e.latlng)
       );
@@ -376,13 +369,35 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  // Method to add restaurant markers with detailed information
+  private _addRestaurantMarkersWithDetails(restaurants: any[]) {
+    const leaflet = this.Leaflet;
+    const map = this.leafletMap;
+    if (!map || !leaflet || !restaurants) return;
+
+    restaurants.forEach((restaurant) => {
+      const { name, location, rating, address } = restaurant;
+      const marker = leaflet.marker(location).addTo(map);
+
+      // Add a popup with detailed information
+      marker.bindPopup(`
+      <strong>${name}</strong><br>
+      <em>Rating:</em> ${rating || "N/A"}<br>
+      <em>Address:</em> ${address || "Not available"}<br>
+      <button onclick="alert('View more about ${name}')">View More</button>
+    `);
+
+      this.markers.push(marker);
+    });
+  }
+
   private async _handleRouteClick(latlng: { lat: number; lng: number }) {
     try {
       const nearbyRestaurants = await this._fetchRestaurantsNearLocation(
         [latlng.lat, latlng.lng],
         5
       );
-      this._addRestaurantMarkers(nearbyRestaurants);
+      this._addRestaurantMarkersWithDetails(nearbyRestaurants);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Error fetching nearby restaurants:", error);
