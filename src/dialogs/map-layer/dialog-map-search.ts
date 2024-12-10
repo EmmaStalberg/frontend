@@ -12,6 +12,8 @@ import "../../components/ha-icon-button-group";
 import "../../components/ha-icon-button-toggle";
 import "../../components/ha-textfield";
 import type { HaTextField } from "../../components/ha-textfield";
+import "@material/mwc-list/mwc-list-item";
+import "../../components/ha-select";
 
 @customElement("ha-map-search-dialog")
 export class MapSearchDialog extends LitElement {
@@ -22,6 +24,9 @@ export class MapSearchDialog extends LitElement {
   @query("#from") private _inputFrom?: HaTextField;
 
   @query("#to") private _inputTo?: HaTextField;
+
+  @query("#transportation-mode")
+  private _transportationMode?: HTMLSelectElement;
 
   public showDialog(dialogParams: UpdateMapSearchDialogParams): void {
     this._dialogParams = dialogParams;
@@ -34,25 +39,9 @@ export class MapSearchDialog extends LitElement {
 
   private _submit(): void {
     const valueFrom = this._inputFrom?.value ?? "";
-    // if (valueFrom === "") {
-    //   showAlertDialog(this, {
-    //     title: "Oops, the starting address is invalid!",
-    //     text: "Please tell us where you want to start!",
-    //     warning: true,
-    //   });
-    //   return;
-    // }
     const valueTo = this._inputTo?.value ?? "";
-    // if (valueTo === "") {
-    //   showAlertDialog(this, {
-    //     title: "Oops, the destination is invalid!",
-    //     text: "Please tell us where you want to go!",
-    //     warning: true,
-    //   });
-    //   return;
-    // }
-
-    this._dialogParams?.submit?.([valueFrom, valueTo]);
+    const transportMode = this._transportationMode?.value ?? "car";
+    this._dialogParams?.submit?.([valueFrom, valueTo, transportMode]);
     this.closeDialog();
   }
 
@@ -91,6 +80,11 @@ export class MapSearchDialog extends LitElement {
             type="text"
             inputmode="text"
           ></ha-textfield>
+          <select id="transportation-mode">
+            <option value="car">Car</option>
+            <option value="bicycle">Bicycle</option>
+            <option value="foot">Foot</option>
+          </select>
         </div>
         <ha-button slot="secondaryAction" dialogAction="cancel">
           ${this.hass.localize("ui.common.cancel")}
@@ -113,7 +107,8 @@ export class MapSearchDialog extends LitElement {
         /* Place above other dialogs */
         --dialog-z-index: 104;
       }
-      ha-textfield {
+      ha-textfield,
+      select {
         width: 100%;
         max-width: 300px;
         margin: auto;

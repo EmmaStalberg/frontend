@@ -51,6 +51,7 @@ import {
 } from "../../../data/map_layer";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 import { showConfirmationDialog } from "../custom-card-helpers";
+// import { fireEvent } from "../../../common/dom/fire_event";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -382,11 +383,23 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       confirm: async () => {
         try {
           await navigator.clipboard.writeText(currentUrl).then(() =>
-            showConfirmationDialog(this, {
-              title: "Share Link",
-              text: "The URL has been copied to your clipboard!",
-              confirmText: "OK",
-            })
+            // showConfirmationDialog(this, {
+            //   title: "Share Link",
+            //   text: "The URL has been copied to your clipboard!",
+            //   confirmText: "OK",
+            // })
+            {
+              const secondDialog = document.createElement("ha-dialog");
+              secondDialog.setAttribute("open", "");
+              secondDialog.style.zIndex = "2000";
+
+              secondDialog.innerHTML = `
+        <div slot="heading">Share Link</div>
+        <p>The URL has been copied to your clipboard!</p>
+        <mwc-button slot="primaryAction" dialogAction="close">Close</mwc-button>
+      `;
+              document.body.appendChild(secondDialog);
+            }
           ); // Copy URL to clipboard
         } catch (error) {
           // eslint-disable-next-line no-console
@@ -413,7 +426,11 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private async _openNavigationDialog(): Promise<void> {
     const response = await showMapSearchDialog(this, {});
     if (!response) return;
-    await this._map?._handleNavigationAction(response[0], response[1]);
+    await this._map?._handleNavigationAction(
+      response[0],
+      response[1],
+      response[2]
+    );
   }
 
   private async _changeLayer(): Promise<void> {

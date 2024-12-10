@@ -302,7 +302,11 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
-  public async _handleNavigationAction(startPoint: string, endPoint: string) {
+  public async _handleNavigationAction(
+    startPoint: string,
+    endPoint: string,
+    transportMode: string
+  ) {
     let startLatlon: [number, number] | null = null;
     let endLatlon: [number, number] | null = null;
     if (startPoint === "") {
@@ -327,7 +331,16 @@ export class HaOSM extends ReactiveElement {
     }
 
     try {
-      const route = await this._fetchRoute(startLatlon, endLatlon);
+      const route = await this._fetchRoute(
+        startLatlon,
+        endLatlon,
+        transportMode
+      );
+      // const { route, duration, distance, steps } = await this._fetchRoute(
+      //   startLatlon,
+      //   endLatlon,
+      //   transportMode
+      // );
       const leaflet = this.Leaflet;
       const map = this.leafletMap;
       if (!map || !leaflet) return;
@@ -358,6 +371,9 @@ export class HaOSM extends ReactiveElement {
         5
       );
 
+      // Show direction info
+
+      // Show restaurant info
       this._addRestaurantMarkersWithDetails(startRestaurants);
       this._addRestaurantMarkersWithDetails(endRestaurants);
       this._routeLayer.on("click", (e: any) =>
@@ -446,16 +462,36 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
-  async _fetchRoute(start: [number, number], end: [number, number]) {
+  async _fetchRoute(
+    start: [number, number],
+    end: [number, number],
+    transportMode: string
+  ) {
+    const transport_mode =
+      transportMode === "car"
+        ? "driving"
+        : transportMode === "bicycle"
+          ? "bicycle"
+          : "foot";
     const [startLat, startLon] = start;
     const [endLat, endLon] = end;
     const response = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`
+      `https://router.project-osrm.org/route/v1/${transport_mode}/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`
     );
     const data = await response.json();
 
     if (data.routes && data.routes.length > 0) {
-      return data.routes[0].geometry;
+      const route = data.routes[0];
+      return {
+        geometry: route.geometry,
+        duration: route.duration, // Duration in seconds
+        distance: route.distance, // Distance in meters
+        steps: route.legs[0].steps.map((step: any) => ({
+          instruction: step.maneuver.instruction,
+          distance: step.distance,
+          duration: step.duration,
+        })),
+      };
     }
     throw new Error("No route found");
   }
