@@ -52,6 +52,7 @@ import {
 } from "../../../data/map_layer";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 import { showConfirmationDialog } from "../custom-card-helpers";
+import { showToast } from "../../../util/toast";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -391,10 +392,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       confirm: async () => {
         try {
           await navigator.clipboard.writeText(currentUrl).then(() =>
-            showConfirmationDialog(this, {
-              title: "Share Link",
-              text: "The URL has been copied to your clipboard!",
-              confirmText: "OK",
+            showToast(this, {
+              message: "The URL has been copied to your clipboard!",
             })
           ); // Copy URL to clipboard
         } catch (error) {
