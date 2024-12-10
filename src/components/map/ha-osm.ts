@@ -331,16 +331,16 @@ export class HaOSM extends ReactiveElement {
     }
 
     try {
-      const route = await this._fetchRoute(
-        startLatlon,
-        endLatlon,
-        transportMode
-      );
-      // const { route, duration, distance, steps } = await this._fetchRoute(
+      // const route = await this._fetchRoute(
       //   startLatlon,
       //   endLatlon,
       //   transportMode
       // );
+      const { route, duration, distance } = await this._fetchRoute(
+        startLatlon,
+        endLatlon,
+        transportMode
+      );
       const leaflet = this.Leaflet;
       const map = this.leafletMap;
       if (!map || !leaflet) return;
@@ -356,12 +356,14 @@ export class HaOSM extends ReactiveElement {
       const startMarker = leaflet.marker(startLatlon).addTo(map);
       startMarker.bindPopup("Start Point").openPopup();
       const endMarker = leaflet.marker(endLatlon).addTo(map);
-      endMarker.bindPopup("End Point");
+
+      endMarker.bindPopup(this._showEndpointPopup(distance, duration));
       this.markers.push(startMarker);
       this.markers.push(endMarker);
       // Fit the map bounds to the route
       map.fitBounds(this._routeLayer.getBounds());
-      // Find restaurants
+
+      // Click to show restaurants
       const startRestaurants = await this._fetchRestaurantsNearLocation(
         startLatlon,
         5
@@ -370,12 +372,8 @@ export class HaOSM extends ReactiveElement {
         endLatlon,
         5
       );
-
-      // Show direction info
-
-      // Show restaurant info
-      this._addRestaurantMarkersWithDetails(startRestaurants);
-      this._addRestaurantMarkersWithDetails(endRestaurants);
+      this._addRestaurantMarkers(startRestaurants);
+      this._addRestaurantMarkers(endRestaurants);
       this._routeLayer.on("click", (e: any) =>
         this._handleRouteClick(e.latlng)
       );
@@ -385,26 +383,24 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
-  // Method to add restaurant markers with detailed information
-  private _addRestaurantMarkersWithDetails(restaurants: any[]) {
-    const leaflet = this.Leaflet;
-    const map = this.leafletMap;
-    if (!map || !leaflet || !restaurants) return;
+  private _showEndpointPopup(distance: number, duration: number) {
+    // Format distance and duration
+    const formattedDistance =
+      distance < 1000
+        ? `${Math.round(distance)} m`
+        : `${(distance / 1000).toFixed(1)} km`;
+    const formattedDuration =
+      duration >= 3600
+        ? `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}min`
+        : `${Math.floor(duration / 60)} min`;
 
-    restaurants.forEach((restaurant) => {
-      const { name, location, rating, address } = restaurant;
-      const marker = leaflet.marker(location).addTo(map);
-
-      // Add a popup with detailed information
-      marker.bindPopup(`
-      <strong>${name}</strong><br>
-      <em>Rating:</em> ${rating || "N/A"}<br>
-      <em>Address:</em> ${address || "Not available"}<br>
-      <button onclick="alert('View more about ${name}')">View More</button>
-    `);
-
-      this.markers.push(marker);
-    });
+    return `
+      <div>
+        <strong>Route Info</strong><br/>
+        Distance: ${formattedDistance}<br/>
+        Duration: ${formattedDuration}
+      </div>
+    `;
   }
 
   private async _handleRouteClick(latlng: { lat: number; lng: number }) {
@@ -413,14 +409,14 @@ export class HaOSM extends ReactiveElement {
         [latlng.lat, latlng.lng],
         5
       );
-      this._addRestaurantMarkersWithDetails(nearbyRestaurants);
+      this._addRestaurantMarkers(nearbyRestaurants);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Error fetching nearby restaurants:", error);
     }
   }
 
-  private _addRestaurantMarkers(restaurants: any[]) {
+  private async _addRestaurantMarkers(restaurants: any[]) {
     const leaflet = this.Leaflet;
     const map = this.leafletMap;
     if (!map || !leaflet) return;
@@ -434,11 +430,66 @@ export class HaOSM extends ReactiveElement {
       const marker = leaflet
         .marker([restaurant.lat, restaurant.lon], { icon: _icon })
         .addTo(map);
-      marker.bindPopup(
-        `<b>${restaurant.tags.name || "Unnamed Restaurant"}</b>`
-      );
+      // marker.bindPopup(
+      //   `<b>${restaurant.tags.name || "Unnamed Restaurant"}</b>`
+      // );
+
+      marker.on("click", async () => {
+        const details = await this._showRestaurantDetails(
+          restaurant.type,
+          restaurant.lat,
+          restaurant.lon
+        );
+        const popupContent = this._generatePopupContent(details);
+        marker.bindPopup(popupContent);
+      });
       this.markers.push(marker);
     });
+  }
+
+  private async _showRestaurantDetails(
+    type: string,
+    lat: number,
+    lon: number
+  ): Promise<any> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?nodetype=${type}&lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch restaurant details");
+      }
+
+      const details = await response.json();
+      return details;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Error fetching restaurant details:", error);
+      return null;
+    }
+  }
+
+  private _generatePopupContent(details: any): string {
+    if (!details) {
+      return "<strong>Unable to fetch details</strong>";
+    }
+
+    const name = details.name || "Unnamed Restaurant";
+    const type = details.type || "Unknown Type";
+    const phone = details.extratags?.phone || "Not available";
+    const address = details.display_name || "Unknown Address";
+    const website = details.extratags?.website
+      ? `<a href="${details.extratags.website}" target="_blank">${details.extratags.website}</a>`
+      : "Not available";
+
+    return `
+      <div>
+        <h3>${name}</h3>
+        <p><strong>Type:</strong> ${type}</p>
+        <p><strong>Address:</strong> ${address}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Website:</strong> ${website}</p>
+      </div>
+    `;
   }
 
   private async _fetchRestaurantsNearLocation(
@@ -483,14 +534,9 @@ export class HaOSM extends ReactiveElement {
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];
       return {
-        geometry: route.geometry,
+        route: route.geometry,
         duration: route.duration, // Duration in seconds
         distance: route.distance, // Distance in meters
-        steps: route.legs[0].steps.map((step: any) => ({
-          instruction: step.maneuver.instruction,
-          distance: step.distance,
-          duration: step.duration,
-        })),
       };
     }
     throw new Error("No route found");
