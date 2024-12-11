@@ -551,7 +551,7 @@ export class HaOSM extends ReactiveElement {
           restaurant.lon
         );
         const popupContent = this._generatePopupContent(details);
-        marker.bindPopup(popupContent);
+        marker.bindPopup(popupContent).openPopup();
       });
       this.markers.push(marker);
     });
@@ -607,7 +607,7 @@ export class HaOSM extends ReactiveElement {
         (restaurant: any) => restaurant.tags && restaurant.tags.name
       );
       // Limit the number of restaurants to `count`
-      return validRestaurants.slice(0, 10);
+      return validRestaurants.slice(0, 5);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Error fetching restaurants:", error);
