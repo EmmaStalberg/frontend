@@ -2,18 +2,18 @@
 
 This is the repository for the official [Home Assistant](https://home-assistant.io) frontend.
 
-![Screenshot of the frontend](https://github.com/EmmaStalberg/frontend/blob/dev-main-frontend/OSM%20screenshot.jpg)
-
 - [View demo of Home Assistant](https://demo.home-assistant.io/)
 - [More information about Home Assistant](https://home-assistant.io)
 - [Frontend development instructions](https://developers.home-assistant.io/docs/frontend/development/)
+  
+![Screenshot of the frontend](https://github.com/EmmaStalberg/frontend/blob/dev-main-frontend/OSM%20screenshot.jpg)
 
 ## **Features**
 ### **OpenStreetMap Integration**
 - **Dynamic Map Layer Switching**:  
   Toggle between various map layers (e.g., standard, satellite views) to customize your view.
 - **Search Functionality**:  
-  Quickly find addresses, coordinates, and nearby facilities (e.g., restaurants, gas stations).
+  Quickly find addresses and coordinates.
 - **Route Planning and Directions**:  
   Input starting and destination points to get optimal routes with turn-by-turn navigation.
 - **Facility Suggestions Along Routes**:  
@@ -21,7 +21,7 @@ This is the repository for the official [Home Assistant](https://home-assistant.
 - **Custom Markers and Annotations**:  
   Add personal notes or highlight important locations directly on the map.
 - **Location Sharing**:  
-  Share specific locations or routes via links, emails, or messages.
+  Share specific locations or routes via links.
 
 ### **Improved Dashboard Customization**
 - Add OpenStreetMap as a dedicated dashboard panel with custom icons and titles.
