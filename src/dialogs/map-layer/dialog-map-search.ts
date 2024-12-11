@@ -50,6 +50,12 @@ export class MapSearchDialog extends LitElement {
     this.closeDialog();
   }
 
+  private _handleKeyDown(event: KeyboardEvent): void {
+    if (event.key === "Enter") {
+      this._submit(); // Prevent the default behavior
+    }
+  }
+
   protected render() {
     if (!this._dialogParams || !this.hass) {
       return nothing;
@@ -59,6 +65,7 @@ export class MapSearchDialog extends LitElement {
       <ha-dialog
         open
         @closed=${this._cancel}
+        @keydown=${this._handleKeyDown}
         escapeKeyAction
         .heading=${this.hass.localize("ui.dialogs.map_search.title")}
       >
@@ -67,7 +74,7 @@ export class MapSearchDialog extends LitElement {
             class="input"
             dialogInitialFocus
             id="from"
-            placeholder="If you want to start form current location, leave it blank."
+            placeholder="Leave blank to use current location"
             .label=${this.hass.localize("ui.dialogs.map_search.input_from")}
             type="text"
             inputmode="text"
@@ -75,7 +82,7 @@ export class MapSearchDialog extends LitElement {
           <ha-textfield
             class="input"
             id="to"
-            placeholder="If you want to reach current location, leave it blank."
+            placeholder="Leave blank to use current location"
             .label=${this.hass.localize("ui.dialogs.map_search.input_to")}
             type="text"
             inputmode="text"
@@ -101,6 +108,12 @@ export class MapSearchDialog extends LitElement {
       p {
         margin: 0;
         color: var(--primary-text-color);
+      }
+      p.helper-text {
+        font-size: 14px;
+        color: var(--secondary-text-color);
+        margin: 8px 0 0;
+        text-align: center;
       }
 
       ha-dialog {

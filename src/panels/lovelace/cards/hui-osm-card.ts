@@ -3,6 +3,7 @@ import {
   mdiLayersTriple,
   mdiShare,
   mdiNearMe,
+  mdiNotePlusOutline,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
 import type { LatLngTuple } from "leaflet";
@@ -53,7 +54,7 @@ import {
 import { logger } from "workbox-core/_private";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 import { showConfirmationDialog } from "../custom-card-helpers";
-// import { fireEvent } from "../../../common/dom/fire_event";
+import { showToast } from "../../../util/toast";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -233,6 +234,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             ></ha-icon-button-toggle>
             <ha-icon-button-toggle
               .label=${this.hass.localize(
+                `ui.panel.lovelace.cards.map.add_a_note`
+              )}
+              .path=${mdiNotePlusOutline}
+              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
+              @click=${this._addNode}
+            ></ha-icon-button-toggle>
+            <ha-icon-button-toggle
+              .label=${this.hass.localize(
                 `ui.panel.lovelace.cards.map.navigation`
               )}
               .path=${mdiNearMe}
@@ -395,23 +404,9 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       confirm: async () => {
         try {
           await navigator.clipboard.writeText(currentUrl).then(() =>
-            // showConfirmationDialog(this, {
-            //   title: "Share Link",
-            //   text: "The URL has been copied to your clipboard!",
-            //   confirmText: "OK",
-            // })
-            {
-              const secondDialog = document.createElement("ha-dialog");
-              secondDialog.setAttribute("open", "");
-              secondDialog.style.zIndex = "2000";
-
-              secondDialog.innerHTML = `
-        <div slot="heading">Share Link</div>
-        <p>The URL has been copied to your clipboard!</p>
-        <mwc-button slot="primaryAction" dialogAction="close">Close</mwc-button>
-      `;
-              document.body.appendChild(secondDialog);
-            }
+            showToast(this, {
+              message: "The URL has been copied to your clipboard!",
+            })
           ); // Copy URL to clipboard
         } catch (error) {
           // eslint-disable-next-line no-console
@@ -456,6 +451,10 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
     await this._map?._handleSearchAction(searchterm);
+  }
+
+  private _addNode() {
+    this._map?._handleAddANote();
   }
 
   private async _openNavigationDialog(): Promise<void> {

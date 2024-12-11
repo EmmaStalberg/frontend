@@ -5598,9 +5598,10 @@
           "map": {
             "reset_focus": "Reset focus",
             "change_layer": "Change layer",
-            "share_location": "Share location",
+            "share_location": "Share link",
             "navigation": "Navigation",
-            "search_on_map": "Search on map"
+            "search_on_map": "Search on map",
+            "add_a_note": "Add a note"
           },
           "energy": {
             "loading": "Loading…",
