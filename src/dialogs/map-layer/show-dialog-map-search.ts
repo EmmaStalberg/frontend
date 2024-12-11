@@ -2,16 +2,16 @@ import { fireEvent } from "../../common/dom/fire_event";
 
 // TODO - need to change this method, now same as layer
 export interface UpdateMapSearchDialogParams {
-  submit?: (locationInfo?: [string, string, string]) => false;
+  confirm?: (layer?: string) => false;
   cancel?: () => void;
 }
 
 export const showMapSearchDialog = (
   element: HTMLElement,
-  dialogParams: UpdateMapSearchDialogParams
+  dialogParams: UpdateMapLayerDialogParams
 ) =>
-  new Promise<[string, string, string] | null>((resolve) => {
-    const origSubmit = dialogParams.submit;
+  new Promise<string | null>((resolve) => {
+    const origConfirm = dialogParams.confirm;
     const origCancel = dialogParams.cancel;
 
     fireEvent(element, "show-dialog", {
@@ -25,10 +25,10 @@ export const showMapSearchDialog = (
             origCancel();
           }
         },
-        submit: (locationInfo: [string, string, string]) => {
-          resolve(locationInfo);
-          if (origSubmit) {
-            origSubmit(locationInfo);
+        confirm: (layer: string) => {
+          resolve(layer);
+          if (origConfirm) {
+            origConfirm(layer);
           }
         },
       },

@@ -2,7 +2,6 @@ import {
   mdiImageFilterCenterFocus,
   mdiLayersTriple,
   mdiShare,
-  mdiNearMe,
   mdiNotePlusOutline,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
@@ -50,9 +49,6 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
-import { showConfirmationDialog } from "../custom-card-helpers";
-import { showToast } from "../../../util/toast";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -93,7 +89,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
-  @state() private _filter?: string;
+  @state() private _filter?: string; 
 
   public setConfig(config: MapCardConfig): void {
     if (!config) {
@@ -195,14 +191,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             renderPassive
           ></ha-osm>
           <search-input-outlined
-            id="search-bar"
-            .hass=${this.hass}
-            @value-changed=${this._handleSearchInputChange}
-            @keypress=${this._handleSearch}
-            .label=${this.hass.localize(
-              "ui.panel.lovelace.editor.edit_card.search_cards"
-            )}
-          ></search-input-outlined>
+              id="search-bar"
+              .hass=${this.hass}
+              @value-changed=${this._handleSearchInputChange}
+              @keypress=${this._handleSearch}
+              .label=${this.hass.localize(
+                "ui.panel.lovelace.editor.edit_card.search_cards"
+              )}
+            ></search-input-outlined>  
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -235,14 +231,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               .path=${mdiNotePlusOutline}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
               @click=${this._addNode}
-            ></ha-icon-button-toggle>
-            <ha-icon-button-toggle
-              .label=${this.hass.localize(
-                `ui.panel.lovelace.cards.map.navigation`
-              )}
-              .path=${mdiNearMe}
-              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
-              @click=${this._openNavigationDialog}
             ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
@@ -385,23 +373,11 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   }
 
   private _shareLocation() {
-    const currentUrl = window.location.href; // Get the current page URL
-    showConfirmationDialog(this, {
-      title: "Share Link",
-      text: `${currentUrl}`,
-      confirm: async () => {
-        try {
-          await navigator.clipboard.writeText(currentUrl).then(() =>
-            showToast(this, {
-              message: "The URL has been copied to your clipboard!",
-            })
-          ); // Copy URL to clipboard
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error("Failed to copy URL:", error);
-        }
-      },
-    });
+    // TODO
+  }
+
+  private _addNode() {
+    // TODO
   }
 
   private _handleSearchInputChange(ev: CustomEvent) {
@@ -411,25 +387,75 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
-    // console.log("ENTER IS PRESSED");
-
-    const searchterm = this._filter?.trim();
+    console.log("ENTER IS PRESSED");
+    
+    const searchterm = this._filter?.trim()
     if (!searchterm) return;
-    await this._map?._handleSearchAction(searchterm);
-  }
+    console.log("Searching for ", searchterm);
 
-  private _addNode() {
-    this._map?._handleAddANote();
-  }
+    // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
+    // await this.hass.callService("open_street_map", "search", {
+    //   query: searchterm,
+    // });
 
-  private async _openNavigationDialog(): Promise<void> {
-    const response = await showMapSearchDialog(this, {});
-    if (!response) return;
-    await this._map?._handleNavigationAction(
-      response[0],
-      response[1],
-      response[2]
-    );
+    // ANOTHER TRY, MIGHT NOT USE
+    // this.hass.bus.on("open_street_map_event", (event) => {
+    //   const { error, results, coordinates } = event.detail;
+
+    //   if (error) {
+    //       console.error("Search Error:", error);
+    //       return;
+    //   }
+
+    //   // Center map around given coordinates retreived from search
+    //   if (coordinates) {
+    //       const [lat, lon] = coordinates;
+    //       this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+    //       console.log("Coordinates found:", lat, lon);
+    //   }
+
+    //   // THIS IS FOR WHEN ADDING THE ENTRE RESULT,
+    //   // BUT MIGHT NEED TO BE IN ANOTHER {}
+    //   if (results) {
+    //       // Handle displaying results, for example, a list of addresses
+    //       console.log("Search results:", results);
+    //   }
+    // });
+
+    // get coordinates 
+    let coordinates: any;
+    try {
+      coordinates = await this.hass.callService(
+        "open_street_map", 
+        "get_address_coordinates", 
+        {
+          device_id: "open_street_map",
+          query: searchterm,
+        }
+      );
+    } catch(error) {
+      console.log("Could not find coordinates", error)
+    }
+    
+
+    // if (coordinates.error) {
+    //   console.error(new Error("Error fetching coordinates:", coordinates.error));
+    //   return;
+    // }
+
+    // update map - center around it and add marker
+    // const lat = 57.6915335;
+    // const lon = 11.9571416;
+    const lat = coordinates[0];
+    const lon = coordinates[1];
+    this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
+
+    // Call the "search" service if needed
+    // const results = await this.hass.callService("open_street_map", "search", {
+    //   device_id: "open_street_map",
+    //   query: searchterm,
+    // });
+    // console.log("Search results:", results);
   }
 
   private async _changeLayer(): Promise<void> {
@@ -611,9 +637,9 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
       search-input-outlined {
         position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 10;
+          top: 10px;
+          right: 10px;
+          z-index: 10;
       }
     `;
   }
