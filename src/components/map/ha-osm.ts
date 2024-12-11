@@ -110,6 +110,8 @@ export class HaOSM extends ReactiveElement {
 
   private noteMarkers: L.Marker[] = [];
 
+  // Disable type checking for Map
+  // @ts-ignore
   private noteData: L.Map<L.Marker, string> = new L.Map();
 
   @state()
