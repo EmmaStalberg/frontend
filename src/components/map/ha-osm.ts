@@ -638,6 +638,7 @@ export class HaOSM extends ReactiveElement {
     `;
     closeButton.addEventListener("click", () => {
       sidePanel.remove();
+      this._clearRouteLayer();
     });
 
     sidePanel.appendChild(closeButton);
