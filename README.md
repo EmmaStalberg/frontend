@@ -55,20 +55,20 @@ The frontend enhancements include:
 
 - **Component Path:**  
   The OpenStreetMap frontend logic is located in the following directory:  
-  [`frontend/src/panels/map/osm-panel.js`](https://github.com/EmmaStalberg/frontend/tree/dev-Jessica/frontend/src/panels/map/osm-panel.js)
+  `frontend/src/panels/map/osm-panel.js`
 
 - **Dynamic Routing and Facility Suggestions:**  
   Implemented using Leaflet with integrated OpenStreetMap APIs for real-time route rendering and facility display.
 
 - **Custom Card Design:**  
   Code for OpenStreetMap dashboard cards is defined in:  
-  [`frontend/src/components/cards/osm-card.js`](https://github.com/EmmaStalberg/frontend/tree/dev-Jessica/frontend/src/components/cards/osm-card.js)
+  `frontend/src/components/cards/osm-card.js`
 
 ---
 
 ### **Testing the Frontend**
 - Relevant test cases for the frontend are stored in:  
-  [`frontend/test/components/osm/`](https://github.com/EmmaStalberg/frontend/tree/dev-Jessica/frontend/test/components/osm/)
+  `frontend/test/components/osm/`
 
 - To run all unit tests, use the following command:
   ```bash
