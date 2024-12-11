@@ -222,6 +222,8 @@ export class HaOSM extends ReactiveElement {
       if (!map) return;
       // Re-trigger location detection
       map.locate({ setView: true, maxZoom: 13 });
+      const newMarker = this.Leaflet.marker(this._location).addTo(map);
+      this.markers.push(newMarker);
       return;
     }
 
