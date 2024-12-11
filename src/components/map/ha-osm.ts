@@ -112,7 +112,7 @@ export class HaOSM extends ReactiveElement {
 
   // Disable type checking for Map
   // @ts-ignore
-  private noteData: L.Map<L.Marker, string> = new L.Map();
+  private noteData: Map<L.Marker, string> = new Map();
 
   @state()
   private _location: [number, number] = [57.7072326, 11.9670171];
