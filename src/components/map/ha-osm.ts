@@ -4,10 +4,11 @@ import type {
   CircleMarker,
   LatLngExpression,
   LatLngTuple,
-  Map,
   Marker,
   Polyline,
+  Map,
 } from "leaflet";
+// eslint-disable-next-line import/no-duplicates
 import { TileLayer } from "leaflet";
 import type { CSSResultGroup, PropertyValues } from "lit";
 import { ReactiveElement, css } from "lit";
@@ -109,7 +110,7 @@ export class HaOSM extends ReactiveElement {
 
   private noteMarkers: L.Marker[] = [];
 
-  private noteData: Map<L.Marker, string> = new Map();
+  private noteData: L.Map<L.Marker, string> = new L.Map();
 
   @state()
   private _location: [number, number] = [57.7072326, 11.9670171];
@@ -488,12 +489,7 @@ export class HaOSM extends ReactiveElement {
     }
 
     try {
-      // const route = await this._fetchRoute(
-      //   startLatlon,
-      //   endLatlon,
-      //   transportMode
-      // );
-      const { route, duration, distance } = await this._fetchRoute(
+      const { route, duration, distance, steps } = await this._fetchRoute(
         [startInfo.lat, startInfo.lon],
         [endInfo.lat, endInfo.lon],
         transportMode
@@ -515,11 +511,11 @@ export class HaOSM extends ReactiveElement {
         .addTo(map);
       startMarker.bindPopup("Start Point").openPopup();
       const endMarker = leaflet.marker([endInfo.lat, endInfo.lon]).addTo(map);
-      endMarker.bindPopup(
-        this._showEndpointPopup(endInfo.name, distance, duration)
-      );
+      endMarker.bindPopup("End Point");
       this.markers.push(startMarker);
       this.markers.push(endMarker);
+      // Show step by step distance
+      this.renderSidePanel({ steps, distance, duration });
       // Fit the map bounds to the route
       map.fitBounds(this._routeLayer.getBounds());
 
@@ -543,25 +539,111 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
-  private _showEndpointPopup(name: string, distance: number, duration: number) {
-    // Format distance and duration
-    const formattedDistance =
-      distance < 1000
-        ? `${Math.round(distance)} m`
-        : `${(distance / 1000).toFixed(1)} km`;
-    const formattedDuration =
-      duration >= 3600
-        ? `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}min`
-        : `${Math.floor(duration / 60)} min`;
+  private renderSidePanel(routeData: {
+    steps: any[];
+    distance: string;
+    duration: string;
+  }) {
+    // Remove existing panel if any
+    const existingPanel = document.getElementById("directions-panel");
+    if (existingPanel) {
+      existingPanel.remove();
+    }
 
-    return `
-      <div>
-        <strong>End point</strong><br/>
-        Name: ${name}<br/>
-        Distance: ${formattedDistance}<br/>
-        Duration: ${formattedDuration}
-      </div>
+    // Create the side panel
+    const sidePanel = document.createElement("div");
+    sidePanel.id = "directions-panel";
+    sidePanel.style.cssText = `
+      position: fixed;
+      right: 1%;
+      top: 15%;;
+      height: 70%;
+      width: 300px;
+      background: white;
+      border-left: 1px solid #ccc;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+      padding: 20px;
     `;
+    const distanceTotal = Number(routeData.distance);
+    const durationTotal = Number(routeData.duration);
+    const formattedDistance =
+      distanceTotal < 1000
+        ? `${Math.round(distanceTotal)} m`
+        : `${(distanceTotal / 1000).toFixed(1)} km`;
+    const formattedDuration =
+      durationTotal >= 3600
+        ? `${Math.floor(durationTotal / 3600)}h ${Math.floor((durationTotal % 3600) / 60)}min`
+        : `${Math.floor(durationTotal / 60)} min`;
+
+    // Add header
+    sidePanel.innerHTML = `
+      <h2 style="margin-top: 0;">Directions</h2>
+      <p><strong>Distance:</strong> ${formattedDistance}</p>
+      <p><strong>Time:</strong> ${formattedDuration}</p>
+      <hr />
+    `;
+
+    // Add steps
+    routeData.steps.forEach((step, index) => {
+      // const instruction =
+      //   step.maneuver.type + " " + step.maneuver.modifier + " " + step.name ||
+      //   "Continue straight";
+      // Construct the instruction text
+      let instruction = "";
+      const maneuver = step.maneuver;
+      const direction = maneuver.type || "Continue"; // Maneuver type (e.g., "turn-left")
+      const modifier = maneuver.modifier || ""; // Directional modifier (e.g., "left", "right")
+      const street = step.name || ""; // Street name (e.g., "Chalmers Tvärgata")
+
+      if (modifier) {
+        instruction = `${direction.charAt(0).toUpperCase() + direction.slice(1)} ${modifier} onto ${street}`;
+      } else if (street) {
+        instruction = `Continue onto ${street}`;
+      } else {
+        instruction = "Continue straight";
+      }
+
+      const distance = (step.distance / 1000).toFixed(2) + " km";
+
+      const stepElement = document.createElement("div");
+      stepElement.style.cssText = `
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+      `;
+      stepElement.innerHTML = `
+        <strong>${index + 1}. ${instruction}</strong><br />
+        <small>${distance}</small>
+      `;
+
+      sidePanel.appendChild(stepElement);
+    });
+
+    // Add close button
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "Close";
+    closeButton.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+    `;
+    closeButton.addEventListener("click", () => {
+      sidePanel.remove();
+    });
+
+    sidePanel.appendChild(closeButton);
+
+    // Append to body
+    document.body.appendChild(sidePanel);
   }
 
   private async _handleRouteClick(latlng: { lat: number; lng: number }) {
@@ -689,6 +771,7 @@ export class HaOSM extends ReactiveElement {
         route: route.geometry,
         duration: route.duration, // Duration in seconds
         distance: route.distance, // Distance in meters
+        steps: route.legs[0]?.steps,
       };
     }
     throw new Error("No route found");
