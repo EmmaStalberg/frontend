@@ -2,7 +2,7 @@
 
 This is the repository for the official [Home Assistant](https://home-assistant.io) frontend.
 
-[![Screenshot of the frontend](https://github.com/EmmaStalberg/frontend/blob/dev-main-frontend/OSM%20screenshot.jpg)]
+![Screenshot of the frontend](https://github.com/EmmaStalberg/frontend/blob/dev-main-frontend/OSM%20screenshot.jpg)
 
 - [View demo of Home Assistant](https://demo.home-assistant.io/)
 - [More information about Home Assistant](https://home-assistant.io)
