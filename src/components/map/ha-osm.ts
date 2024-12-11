@@ -607,7 +607,7 @@ export class HaOSM extends ReactiveElement {
         (restaurant: any) => restaurant.tags && restaurant.tags.name
       );
       // Limit the number of restaurants to `count`
-      return validRestaurants.slice(0, 5);
+      return validRestaurants.slice(0, 6);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Error fetching restaurants:", error);
