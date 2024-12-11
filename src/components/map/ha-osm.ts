@@ -37,6 +37,7 @@ import type { OpenStreetMapPlace } from "../../data/openstreetmap";
 import { reverseGeocode } from "../../data/openstreetmap";
 import { showAlertDialog } from "../../panels/lovelace/custom-card-helpers";
 import { showToast } from "../../util/toast";
+import { showAddNoteDialog } from "../../dialogs/map-layer/show-add-note";
 
 const getEntityId = (entity: string | HaMapEntity): string =>
   typeof entity === "string" ? entity : entity.entity_id;
@@ -107,6 +108,8 @@ export class HaOSM extends ReactiveElement {
   private _routeLayer: L.GeoJSON | null = null;
 
   private noteMarkers: L.Marker[] = [];
+
+  private noteData: Map<L.Marker, string> = new Map();
 
   @state()
   private _location: [number, number] = [57.7072326, 11.9670171];
@@ -310,6 +313,9 @@ export class HaOSM extends ReactiveElement {
       this.leafletMap?.removeLayer(this._routeLayer); // Remove the route from the map
       this._routeLayer = null; // Reset the reference
     }
+    this.noteMarkers.forEach((marker) => {
+      marker.closePopup();
+    });
   }
 
   public _handleAddANote() {
@@ -332,20 +338,38 @@ export class HaOSM extends ReactiveElement {
       .addTo(map);
 
     // Bind popup to the marker
-    noteMarker
-      .bindPopup(
-        `
-        <div>
-          <strong>Note:</strong><br/>
-          Drag this marker to the desired location.<br/>
-          <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
-        </div>
-      `
-      )
-      .openPopup();
+    // noteMarker
+    //   .bindPopup(
+    //     `
+    //     <div>
+    //       <strong>Note:</strong>No note added<br/>
+    //       Drag this marker to the desired location.<br/>
+    //        <button id="add-note" style="margin-top: 5px;">Add Note</button>
+    //       <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
+    //     </div>
+    //   `
+    //   )
+    //   .openPopup();
 
     // Add the marker to the noteMarkers array for tracking
     this.noteMarkers.push(noteMarker);
+    this.noteData.set(noteMarker, "");
+
+    // Bind popup with Add Note button
+    const updatePopupContent = (note: string = "No note added yet.") => {
+      noteMarker
+        .bindPopup(
+          `
+      <div>
+        <strong>Note:</strong> <span id="note-content">${note}</span><br/>
+        Drag this marker to the desired location.<br/>
+        <button id="add-note" style="margin-top: 5px;">Add Note</button>
+        <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
+      </div>
+    `
+        )
+        .openPopup();
+    };
 
     // Add click event to remove the marker
     noteMarker.on("popupopen", () => {
@@ -356,6 +380,30 @@ export class HaOSM extends ReactiveElement {
         console.error("Popup content not found");
         return;
       }
+      const note = this.noteData.get(noteMarker) || "No note added yet.";
+      // Update the popup content dynamically
+      const noteElement = popupContent.querySelector(
+        "#note-content"
+      ) as HTMLElement;
+      if (noteElement) {
+        noteElement.textContent = note;
+        updatePopupContent(note);
+      }
+
+      // Add note button functionality
+      const addNoteButton = popupContent.querySelector(
+        "#add-note"
+      ) as HTMLElement;
+      if (!addNoteButton) {
+        // eslint-disable-next-line no-console
+        console.error("Add note button not found in popup");
+        return;
+      }
+      addNoteButton.addEventListener("click", async () => {
+        const response = await showAddNoteDialog(this, {});
+        this.noteData.set(noteMarker, response || ""); // Update the note in the Map
+        noteMarker.closePopup();
+      });
 
       const removeButton = popupContent.querySelector(
         "#remove-note"
@@ -373,6 +421,7 @@ export class HaOSM extends ReactiveElement {
         this.noteMarkers = this.noteMarkers.filter(
           (marker) => marker !== noteMarker
         );
+        this.noteData.delete(noteMarker);
       });
     });
 
@@ -382,6 +431,7 @@ export class HaOSM extends ReactiveElement {
       // eslint-disable-next-line no-console
       console.log(`Marker moved to: ${lat}, ${lng}`);
     });
+    updatePopupContent();
   }
 
   public async _handleNavigationAction(
@@ -622,15 +672,16 @@ export class HaOSM extends ReactiveElement {
   ) {
     const transport_mode =
       transportMode === "car"
-        ? "driving"
+        ? "car"
         : transportMode === "bicycle"
-          ? "bicycle"
+          ? "bike"
           : "foot";
+
     const [startLat, startLon] = start;
     const [endLat, endLon] = end;
-    const data = await this.fetchApiJson(
-      `https://router.project-osrm.org/route/v1/${transport_mode}/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`
-    );
+    // https://routing.openstreetmap.de/routed-foot/route/v1/driving/11.97652589525446,57.6897462;11.9634657,57.7040307?overview=false&geometries=polyline&steps=true&
+    const url = `https://routing.openstreetmap.de/routed-${transport_mode}/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson&steps=true`;
+    const data = await this.fetchApiJson(url);
 
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];
