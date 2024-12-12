@@ -4,10 +4,11 @@ import type {
   CircleMarker,
   LatLngExpression,
   LatLngTuple,
-  Map,
   Marker,
   Polyline,
+  Map,
 } from "leaflet";
+// eslint-disable-next-line import/no-duplicates
 import { TileLayer } from "leaflet";
 import type { CSSResultGroup, PropertyValues } from "lit";
 import { ReactiveElement, css } from "lit";
@@ -36,6 +37,8 @@ import "./ha-entity-marker";
 import type { OpenStreetMapPlace } from "../../data/openstreetmap";
 import { reverseGeocode } from "../../data/openstreetmap";
 import { showAlertDialog } from "../../panels/lovelace/custom-card-helpers";
+import { showToast } from "../../util/toast";
+import { showAddNoteDialog } from "../../dialogs/map-layer/show-add-note";
 
 const getEntityId = (entity: string | HaMapEntity): string =>
   typeof entity === "string" ? entity : entity.entity_id;
@@ -106,6 +109,10 @@ export class HaOSM extends ReactiveElement {
   private _routeLayer: L.GeoJSON | null = null;
 
   private noteMarkers: L.Marker[] = [];
+
+  // Disable type checking for Map
+  // @ts-ignore
+  private noteData: Map<L.Marker, string> = new Map();
 
   @state()
   private _location: [number, number] = [57.7072326, 11.9670171];
@@ -250,9 +257,7 @@ export class HaOSM extends ReactiveElement {
     return jsonData;
   }
 
-  private async _fetchCoordinates(
-    searchterm: string
-  ): Promise<[number, number] | null> {
+  private async _fetchAdressInfo(searchterm: string): Promise<any> {
     try {
       const data = await this.fetchApiJson(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchterm)}&format=json&polygon=1&addressdetails=1`
@@ -266,11 +271,7 @@ export class HaOSM extends ReactiveElement {
         return null;
       }
       const node = data[0];
-      // Extract latitudes and longitudes
-      const latValues = node.lat;
-      const lonValues = node.lon;
-
-      return [Number(latValues), Number(lonValues)]; // Return the tuple
+      return node;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Error fetching coordinates:", error);
@@ -281,17 +282,29 @@ export class HaOSM extends ReactiveElement {
   public async _handleSearchAction(searchterm: string) {
     // Search action
     if (!searchterm) return;
-    const latAndLon = await this._fetchCoordinates(searchterm);
-    if (!latAndLon) return;
+    const data = await this._fetchAdressInfo(searchterm);
+    if (!data) return;
+    // Extract latitudes and longitudes
+    const latValues = data.lat;
+    const lonValues = data.lon;
+
     const leaflet = this.Leaflet;
     const map = this.leafletMap;
     if (!map || !leaflet) return;
-    map.setView([latAndLon[0], latAndLon[1]], this.zoom);
+    map.setView([latValues, lonValues], this.zoom);
     // Clear previoud markers
     this._clearRouteLayer();
-    const foundAddress = leaflet
-      .marker([latAndLon[0], latAndLon[1]])
-      .addTo(map);
+    const foundAddress = leaflet.marker([latValues, lonValues]).addTo(map);
+    // Create popup content
+    const popupContent = `
+      <div>
+        <strong>${data.name || "Unknown Location"}</strong><br/>
+        ${data.display_name || "No address available"}
+      </div>
+    `;
+
+    // Bind popup to the marker
+    foundAddress.bindPopup(popupContent).openPopup();
     this.markers.push(foundAddress);
   }
 
@@ -303,6 +316,9 @@ export class HaOSM extends ReactiveElement {
       this.leafletMap?.removeLayer(this._routeLayer); // Remove the route from the map
       this._routeLayer = null; // Reset the reference
     }
+    this.noteMarkers.forEach((marker) => {
+      marker.closePopup();
+    });
   }
 
   public _handleAddANote() {
@@ -325,20 +341,38 @@ export class HaOSM extends ReactiveElement {
       .addTo(map);
 
     // Bind popup to the marker
-    noteMarker
-      .bindPopup(
-        `
-        <div>
-          <strong>Note:</strong><br/>
-          Drag this marker to the desired location.<br/>
-          <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
-        </div>
-      `
-      )
-      .openPopup();
+    // noteMarker
+    //   .bindPopup(
+    //     `
+    //     <div>
+    //       <strong>Note:</strong>No note added<br/>
+    //       Drag this marker to the desired location.<br/>
+    //        <button id="add-note" style="margin-top: 5px;">Add Note</button>
+    //       <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
+    //     </div>
+    //   `
+    //   )
+    //   .openPopup();
 
     // Add the marker to the noteMarkers array for tracking
     this.noteMarkers.push(noteMarker);
+    this.noteData.set(noteMarker, "");
+
+    // Bind popup with Add Note button
+    const updatePopupContent = (note: string = "No note added yet.") => {
+      noteMarker
+        .bindPopup(
+          `
+      <div>
+        <strong>Note:</strong> <span id="note-content">${note}</span><br/>
+        Drag this marker to the desired location.<br/>
+        <button id="add-note" style="margin-top: 5px;">Add Note</button>
+        <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
+      </div>
+    `
+        )
+        .openPopup();
+    };
 
     // Add click event to remove the marker
     noteMarker.on("popupopen", () => {
@@ -349,6 +383,30 @@ export class HaOSM extends ReactiveElement {
         console.error("Popup content not found");
         return;
       }
+      const note = this.noteData.get(noteMarker) || "No note added yet.";
+      // Update the popup content dynamically
+      const noteElement = popupContent.querySelector(
+        "#note-content"
+      ) as HTMLElement;
+      if (noteElement) {
+        noteElement.textContent = note;
+        updatePopupContent(note);
+      }
+
+      // Add note button functionality
+      const addNoteButton = popupContent.querySelector(
+        "#add-note"
+      ) as HTMLElement;
+      if (!addNoteButton) {
+        // eslint-disable-next-line no-console
+        console.error("Add note button not found in popup");
+        return;
+      }
+      addNoteButton.addEventListener("click", async () => {
+        const response = await showAddNoteDialog(this, {});
+        this.noteData.set(noteMarker, response || ""); // Update the note in the Map
+        noteMarker.closePopup();
+      });
 
       const removeButton = popupContent.querySelector(
         "#remove-note"
@@ -366,6 +424,7 @@ export class HaOSM extends ReactiveElement {
         this.noteMarkers = this.noteMarkers.filter(
           (marker) => marker !== noteMarker
         );
+        this.noteData.delete(noteMarker);
       });
     });
 
@@ -375,6 +434,7 @@ export class HaOSM extends ReactiveElement {
       // eslint-disable-next-line no-console
       console.log(`Marker moved to: ${lat}, ${lng}`);
     });
+    updatePopupContent();
   }
 
   public async _handleNavigationAction(
@@ -383,38 +443,57 @@ export class HaOSM extends ReactiveElement {
     endPoint: string,
     transportMode: string
   ) {
-    let startLatlon: [number, number] | null = null;
-    let endLatlon: [number, number] | null = null;
+    let startInfo: { name: string; lat: number; lon: number } | null = null;
+    let endInfo: { name: string; lat: number; lon: number } | null = null;
     if (startPoint === "") {
-      startLatlon = this._location;
+      startInfo = {
+        name: "Current location",
+        lat: this._location[0],
+        lon: this._location[1],
+      };
     } else {
-      startLatlon = await this._fetchCoordinates(startPoint);
-      if (!startLatlon) {
+      const fetchedStart = await this._fetchAdressInfo(startPoint);
+      if (!fetchedStart) {
         // eslint-disable-next-line no-console
         console.error("Failed to fetch start coordinates.");
         return; // Exit if start coordinates couldn't be fetched
       }
+      startInfo = {
+        name: fetchedStart.name,
+        lat: fetchedStart.lat,
+        lon: fetchedStart.lon,
+      };
     }
     if (endPoint === "") {
-      endLatlon = this._location;
+      endInfo = {
+        name: "Current location",
+        lat: this._location[0],
+        lon: this._location[1],
+      };
     } else {
-      endLatlon = await this._fetchCoordinates(endPoint);
-      if (!endLatlon) {
+      const fetchedEnd = await this._fetchAdressInfo(endPoint);
+      if (!fetchedEnd) {
         // eslint-disable-next-line no-console
         console.error("Failed to fetch end coordinates.");
         return; // Exit if end coordinates couldn't be fetched
       }
+      endInfo = {
+        name: fetchedEnd.name,
+        lat: fetchedEnd.lat,
+        lon: fetchedEnd.lon,
+      };
+    }
+    if (startInfo.lat === endInfo.lat && startInfo.lon === endInfo.lon) {
+      showToast(this, {
+        message: "Please provide a valid destination!",
+      });
+      return;
     }
 
     try {
-      // const route = await this._fetchRoute(
-      //   startLatlon,
-      //   endLatlon,
-      //   transportMode
-      // );
-      const { route, duration, distance } = await this._fetchRoute(
-        startLatlon,
-        endLatlon,
+      const { route, duration, distance, steps } = await this._fetchRoute(
+        [startInfo.lat, startInfo.lon],
+        [endInfo.lat, endInfo.lon],
         transportMode
       );
       const leaflet = this.Leaflet;
@@ -429,24 +508,28 @@ export class HaOSM extends ReactiveElement {
         .addTo(map);
 
       // Add start and end markers
-      const startMarker = leaflet.marker(startLatlon).addTo(map);
+      const startMarker = leaflet
+        .marker([startInfo.lat, startInfo.lon])
+        .addTo(map);
       startMarker.bindPopup("Start Point").openPopup();
-      const endMarker = leaflet.marker(endLatlon).addTo(map);
-      endMarker.bindPopup(this._showEndpointPopup(distance, duration));
+      const endMarker = leaflet.marker([endInfo.lat, endInfo.lon]).addTo(map);
+      endMarker.bindPopup("End Point");
       this.markers.push(startMarker);
       this.markers.push(endMarker);
+      // Show step by step distance
+      this.renderSidePanel({ steps, distance, duration });
       // Fit the map bounds to the route
       map.fitBounds(this._routeLayer.getBounds());
 
       // Click to show restaurants
-      const startRestaurants = await this._fetchRestaurantsNearLocation(
-        startLatlon,
-        5
-      );
-      const endRestaurants = await this._fetchRestaurantsNearLocation(
-        endLatlon,
-        5
-      );
+      const startRestaurants = await this._fetchRestaurantsNearLocation([
+        startInfo.lat,
+        startInfo.lon,
+      ]);
+      const endRestaurants = await this._fetchRestaurantsNearLocation([
+        endInfo.lat,
+        endInfo.lon,
+      ]);
       this._addRestaurantMarkers(startRestaurants);
       this._addRestaurantMarkers(endRestaurants);
       this._routeLayer.on("click", (e: any) =>
@@ -458,32 +541,120 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
-  private _showEndpointPopup(distance: number, duration: number) {
-    // Format distance and duration
-    const formattedDistance =
-      distance < 1000
-        ? `${Math.round(distance)} m`
-        : `${(distance / 1000).toFixed(1)} km`;
-    const formattedDuration =
-      duration >= 3600
-        ? `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}min`
-        : `${Math.floor(duration / 60)} min`;
+  private renderSidePanel(routeData: {
+    steps: any[];
+    distance: string;
+    duration: string;
+  }) {
+    // Remove existing panel if any
+    const existingPanel = document.getElementById("directions-panel");
+    if (existingPanel) {
+      existingPanel.remove();
+    }
 
-    return `
-      <div>
-        <strong>End point</strong><br/>
-        Distance: ${formattedDistance}<br/>
-        Duration: ${formattedDuration}
-      </div>
+    // Create the side panel
+    const sidePanel = document.createElement("div");
+    sidePanel.id = "directions-panel";
+    sidePanel.style.cssText = `
+      position: fixed;
+      right: 1%;
+      top: 15%;;
+      height: 70%;
+      width: 300px;
+      background: white;
+      border-left: 1px solid #ccc;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+      padding: 20px;
     `;
+    const distanceTotal = Number(routeData.distance);
+    const durationTotal = Number(routeData.duration);
+    const formattedDistance =
+      distanceTotal < 1000
+        ? `${Math.round(distanceTotal)} m`
+        : `${(distanceTotal / 1000).toFixed(1)} km`;
+    const formattedDuration =
+      durationTotal >= 3600
+        ? `${Math.floor(durationTotal / 3600)}h ${Math.floor((durationTotal % 3600) / 60)}min`
+        : `${Math.floor(durationTotal / 60)} min`;
+
+    // Add header
+    sidePanel.innerHTML = `
+      <h2 style="margin-top: 0;">Directions</h2>
+      <p><strong>Distance:</strong> ${formattedDistance}</p>
+      <p><strong>Time:</strong> ${formattedDuration}</p>
+      <hr />
+    `;
+
+    // Add steps
+    routeData.steps.forEach((step, index) => {
+      // const instruction =
+      //   step.maneuver.type + " " + step.maneuver.modifier + " " + step.name ||
+      //   "Continue straight";
+      // Construct the instruction text
+      let instruction = "";
+      const maneuver = step.maneuver;
+      const direction = maneuver.type || "Continue"; // Maneuver type (e.g., "turn-left")
+      const modifier = maneuver.modifier || ""; // Directional modifier (e.g., "left", "right")
+      const street = step.name || ""; // Street name (e.g., "Chalmers Tvärgata")
+
+      if (modifier) {
+        instruction = `${direction.charAt(0).toUpperCase() + direction.slice(1)} ${modifier} onto ${street}`;
+      } else if (street) {
+        instruction = `Continue onto ${street}`;
+      } else {
+        instruction = "Continue straight";
+      }
+
+      const distance = (step.distance / 1000).toFixed(2) + " km";
+
+      const stepElement = document.createElement("div");
+      stepElement.style.cssText = `
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+      `;
+      stepElement.innerHTML = `
+        <strong>${index + 1}. ${instruction}</strong><br />
+        <small>${distance}</small>
+      `;
+
+      sidePanel.appendChild(stepElement);
+    });
+
+    // Add close button
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "Close";
+    closeButton.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+    `;
+    closeButton.addEventListener("click", () => {
+      sidePanel.remove();
+      this._clearRouteLayer();
+    });
+
+    sidePanel.appendChild(closeButton);
+
+    // Append to body
+    document.body.appendChild(sidePanel);
   }
 
   private async _handleRouteClick(latlng: { lat: number; lng: number }) {
     try {
-      const nearbyRestaurants = await this._fetchRestaurantsNearLocation(
-        [latlng.lat, latlng.lng],
-        5
-      );
+      const nearbyRestaurants = await this._fetchRestaurantsNearLocation([
+        latlng.lat,
+        latlng.lng,
+      ]);
       this._addRestaurantMarkers(nearbyRestaurants);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -511,30 +682,20 @@ export class HaOSM extends ReactiveElement {
 
       marker.on("click", async () => {
         const details = await this._showRestaurantDetails(
-          restaurant.type,
           restaurant.lat,
           restaurant.lon
         );
         const popupContent = this._generatePopupContent(details);
-        marker.bindPopup(popupContent);
+        marker.bindPopup(popupContent).openPopup();
       });
       this.markers.push(marker);
     });
   }
 
-  private async _showRestaurantDetails(
-    type: string,
-    lat: number,
-    lon: number
-  ): Promise<any> {
+  private async _showRestaurantDetails(lat: number, lon: number): Promise<any> {
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?nodetype=${type}&lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch restaurant details");
-      }
-
-      const details = await response.json();
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
+      const details = await this.fetchApiJson(url);
       return details;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -568,19 +729,20 @@ export class HaOSM extends ReactiveElement {
   }
 
   private async _fetchRestaurantsNearLocation(
-    location: [number, number],
-    count: number
+    location: [number, number]
   ): Promise<any[]> {
     const [lat, lon] = location;
     try {
       // Query restaurants within a 500m radius (adjust as needed)
-      const response = await fetch(
+      const data = await this.fetchApiJson(
         `https://overpass-api.de/api/interpreter?data=[out:json];node["amenity"="restaurant"](around:500,${lat},${lon});out;`
       );
-      const data = await response.json();
 
+      const validRestaurants = data.elements.filter(
+        (restaurant: any) => restaurant.tags && restaurant.tags.name
+      );
       // Limit the number of restaurants to `count`
-      return data.elements.slice(0, count);
+      return validRestaurants.slice(0, 6);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("Error fetching restaurants:", error);
@@ -595,16 +757,16 @@ export class HaOSM extends ReactiveElement {
   ) {
     const transport_mode =
       transportMode === "car"
-        ? "driving"
+        ? "car"
         : transportMode === "bicycle"
-          ? "bicycle"
+          ? "bike"
           : "foot";
+
     const [startLat, startLon] = start;
     const [endLat, endLon] = end;
-    const response = await fetch(
-      `https://router.project-osrm.org/route/v1/${transport_mode}/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`
-    );
-    const data = await response.json();
+    // https://routing.openstreetmap.de/routed-foot/route/v1/driving/11.97652589525446,57.6897462;11.9634657,57.7040307?overview=false&geometries=polyline&steps=true&
+    const url = `https://routing.openstreetmap.de/routed-${transport_mode}/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson&steps=true`;
+    const data = await this.fetchApiJson(url);
 
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];
@@ -612,6 +774,7 @@ export class HaOSM extends ReactiveElement {
         route: route.geometry,
         duration: route.duration, // Duration in seconds
         distance: route.distance, // Distance in meters
+        steps: route.legs[0]?.steps,
       };
     }
     throw new Error("No route found");
