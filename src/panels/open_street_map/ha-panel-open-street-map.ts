@@ -12,6 +12,11 @@ import "../../components/search-input";
 import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
+/**
+ * Represents the OpenStreetMap panel in the Home Assistant interface.
+ * This component integrates the OpenStreetMap (OSM) service, displaying the map, and provides
+ * features like zone editing (for admins) and search functionality.
+ */
 @customElement("open-street-map-panel")
 class OpenStreetMapPanel extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -22,6 +27,13 @@ class OpenStreetMapPanel extends LitElement {
 
   @property({ type: Object }) public panel?: { config: object };
 
+  /**
+   * Renders the OpenStreetMap panel content.
+   * This includes the top app bar with navigation and zone editing icons (for admins),
+   * and the OpenStreetMap component (`ha-osm`) for displaying the map.
+   *
+   * @returns The HTML content for the OpenStreetMap panel.
+   */
   protected render() {
     return html`
       <ha-top-app-bar-fixed class="top-bar">
@@ -48,6 +60,12 @@ class OpenStreetMapPanel extends LitElement {
     navigate("/config/zone?historyBack=1");
   }
 
+  /**
+   * Lifecycle method that runs before the component updates.
+   * It checks if the Home Assistant instance (`hass`) has changed and stores the previous value.
+   *
+   * @param changedProps The properties that have changed.
+   */
   public willUpdate(changedProps: PropertyValues) {
     super.willUpdate(changedProps);
     if (!changedProps.has("hass")) {
@@ -56,6 +74,12 @@ class OpenStreetMapPanel extends LitElement {
     const _oldHass = changedProps.get("hass") as HomeAssistant | undefined;
   }
 
+  /**
+   * Defines the styles for the OpenStreetMap panel.
+   * This includes styling for the map and the top app bar, including positioning and layout of elements.
+   *
+   * @returns An array of CSS styles applied to the component.
+   */
   static get styles(): CSSResultGroup {
     return [
       haStyle,

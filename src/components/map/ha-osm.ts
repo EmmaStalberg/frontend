@@ -40,6 +40,7 @@ import { showAlertDialog } from "../../panels/lovelace/custom-card-helpers";
 import { showToast } from "../../util/toast";
 import { showAddNoteDialog } from "../../dialogs/map-layer/show-add-note";
 
+// Utility function to extract the entity ID
 const getEntityId = (entity: string | HaMapEntity): string =>
   typeof entity === "string" ? entity : entity.entity_id;
 
@@ -119,6 +120,9 @@ export class HaOSM extends ReactiveElement {
 
   @state() private _places?: OpenStreetMapPlace[] | null;
 
+  /**
+   * Called when the component is connected to the DOM. Initializes the map and sets up an observer.
+   */
   public connectedCallback(): void {
     super.connectedCallback();
     this._loadMap();
@@ -153,6 +157,9 @@ export class HaOSM extends ReactiveElement {
 
   private _loading = false;
 
+  /**
+   * Loads the map and initializes the Leaflet map and tile layer.
+   */
   private async _loadMap(): Promise<void> {
     if (this._loading) return;
     let map = this.shadowRoot!.getElementById("map");
@@ -171,6 +178,9 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  /**
+   * Finds the current location of the user and places a marker on the map.
+   */
   private _findCurrentLocation(): void {
     const map = this.leafletMap;
     const leaflet = this.Leaflet;
@@ -187,6 +197,9 @@ export class HaOSM extends ReactiveElement {
     });
   }
 
+  /**
+   * Reverse geocodes the current location to fetch place information.
+   */
   private async _reverseGeocode() {
     if (!this._location) {
       return;
@@ -196,6 +209,10 @@ export class HaOSM extends ReactiveElement {
     this._places = [reverse];
   }
 
+  /**
+   * Fits the map bounds to the given focus items or zones.
+   * @param options Optional parameters to adjust zoom level and padding.
+   */
   public fitMap(options?: { zoom?: number; pad?: number }): void {
     if (!this.leafletMap || !this.Leaflet || !this.hass) {
       return;
@@ -223,8 +240,13 @@ export class HaOSM extends ReactiveElement {
     this.leafletMap.fitBounds(bounds, { maxZoom: options?.zoom || this.zoom });
   }
 
-  // Note! This works for one pair of coordinates. If one want to later make this work for several
-  // coordinates at once, it needs to be updated similar to fitMap
+  /**
+   * Fits the map to a specific set of coordinates.
+   * @param coordinates The latitude and longitude of the coordinates.
+   * @param options Optional parameters to adjust zoom level and padding.
+   */
+  // Note! This works for one pair of coordinates. If one want to later make
+  // this work for several coordinates at once, it needs to be updated similar to fitMap
   public fitMapToCoordinates(
     coordinates: LatLngTuple,
     options?: { zoom?: number; pad?: number }
@@ -246,6 +268,11 @@ export class HaOSM extends ReactiveElement {
     this.markers.push(foundAddress);
   }
 
+  /**
+   * Fetches JSON data from a given API URL.
+   * @param url The URL to fetch data from.
+   * @returns The fetched JSON data.
+   */
   async fetchApiJson(url: string): Promise<any> {
     const response = await fetch(url);
 
@@ -257,6 +284,11 @@ export class HaOSM extends ReactiveElement {
     return jsonData;
   }
 
+  /**
+   * Fetches address infromation for a given search term
+   * @param searchterm The address or place to search for.
+   * @returns The address data if found, otherwise null
+   */
   private async _fetchAdressInfo(searchterm: string): Promise<any> {
     try {
       const data = await this.fetchApiJson(
@@ -279,6 +311,10 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  /**
+   * Handles the search action, fetches address info, and displays the location on a map.
+   * @param searchterm The search term to find the location.
+   */
   public async _handleSearchAction(searchterm: string) {
     // Search action
     if (!searchterm) return;
@@ -339,20 +375,6 @@ export class HaOSM extends ReactiveElement {
     const noteMarker = leaflet
       .marker(initialLatLng, { icon: redIcon, draggable: true }) // Make the marker draggable
       .addTo(map);
-
-    // Bind popup to the marker
-    // noteMarker
-    //   .bindPopup(
-    //     `
-    //     <div>
-    //       <strong>Note:</strong>No note added<br/>
-    //       Drag this marker to the desired location.<br/>
-    //        <button id="add-note" style="margin-top: 5px;">Add Note</button>
-    //       <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
-    //     </div>
-    //   `
-    //   )
-    //   .openPopup();
 
     // Add the marker to the noteMarkers array for tracking
     this.noteMarkers.push(noteMarker);
@@ -437,6 +459,12 @@ export class HaOSM extends ReactiveElement {
     updatePopupContent();
   }
 
+  /**
+   * Handles the navigation action by fetching route information and displaying it on the map.
+   * @param startPoint The starting point address.
+   * @param endPoint The destination address.
+   * @param transportMode The mode of transportation (e.g., walking, driving).
+   */
   public async _handleNavigationAction(
     // Show direction function
     startPoint: string,
@@ -541,6 +569,10 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  /**
+   * Renders the side panel displaying the route details including steps, distance, and duration.
+   * @param routeData An object containing the route's steps, distance, and duration.
+   */
   private renderSidePanel(routeData: {
     steps: any[];
     distance: string;
@@ -589,10 +621,6 @@ export class HaOSM extends ReactiveElement {
 
     // Add steps
     routeData.steps.forEach((step, index) => {
-      // const instruction =
-      //   step.maneuver.type + " " + step.maneuver.modifier + " " + step.name ||
-      //   "Continue straight";
-      // Construct the instruction text
       let instruction = "";
       const maneuver = step.maneuver;
       const direction = maneuver.type || "Continue"; // Maneuver type (e.g., "turn-left")
@@ -649,6 +677,10 @@ export class HaOSM extends ReactiveElement {
     document.body.appendChild(sidePanel);
   }
 
+  /**
+   * Handles a click event on a route marker, fetching nearby restaurants for the given location.
+   * @param latlng - Latitude and longitude coordinates of the clicked location.
+   */
   private async _handleRouteClick(latlng: { lat: number; lng: number }) {
     try {
       const nearbyRestaurants = await this._fetchRestaurantsNearLocation([
@@ -662,6 +694,11 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  /**
+   * Adds markers for restaurants on the map for each restaurant in the provided list.
+   * Each marker is clickable, and upon clicking, displays detailed information about the restaurant.
+   * @param restaurants - Array of restaurant objects containing latitude and longitude information.
+   */
   private async _addRestaurantMarkers(restaurants: any[]) {
     const leaflet = this.Leaflet;
     const map = this.leafletMap;
@@ -677,8 +714,6 @@ export class HaOSM extends ReactiveElement {
         .marker([restaurant.lat, restaurant.lon], { icon: _icon })
         .addTo(map);
       // marker.bindPopup(
-      //   `<b>${restaurant.tags.name || "Unnamed Restaurant"}</b>`
-      // );
 
       marker.on("click", async () => {
         const details = await this._showRestaurantDetails(
@@ -692,6 +727,12 @@ export class HaOSM extends ReactiveElement {
     });
   }
 
+  /**
+   * Fetches detailed information for a restaurant from OpenStreetMap based on the restaurant's latitude and longitude.
+   * @param lat - Latitude of the restaurant.
+   * @param lon - Longitude of the restaurant.
+   * @returns A promise that resolves to the restaurant's details in JSON format.
+   */
   private async _showRestaurantDetails(lat: number, lon: number): Promise<any> {
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
@@ -704,6 +745,12 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  /**
+   * Generates the HTML content for a popup displaying restaurant details.
+   *
+   * @param details - The restaurant details to display.
+   * @returns A string containing the HTML content for the popup.
+   */
   private _generatePopupContent(details: any): string {
     if (!details) {
       return "<strong>Unable to fetch details</strong>";
@@ -728,6 +775,12 @@ export class HaOSM extends ReactiveElement {
     `;
   }
 
+  /**
+   * Fetches restaurants near the specified location within a 500m radius.
+   *
+   * @param location - A tuple representing the latitude and longitude of the location.
+   * @returns A Promise that resolves to an array of restaurants within the radius.
+   */
   private async _fetchRestaurantsNearLocation(
     location: [number, number]
   ): Promise<any[]> {
@@ -750,6 +803,15 @@ export class HaOSM extends ReactiveElement {
     }
   }
 
+  /**
+   * Fetches a route between two geographical points using the specified transport mode.
+   *
+   * @param start - The start point as a tuple of latitude and longitude.
+   * @param end - The end point as a tuple of latitude and longitude.
+   * @param transportMode - The mode of transport (car, bicycle, or foot).
+   * @returns A Promise that resolves to an object containing the route geometry, duration, distance, and steps.
+   * @throws An error if no route is found.
+   */
   async _fetchRoute(
     start: [number, number],
     end: [number, number],
@@ -793,6 +855,9 @@ export class HaOSM extends ReactiveElement {
     this.leafletMap.fitBounds(bounds, { maxZoom: options?.zoom || this.zoom });
   }
 
+  /**
+   * Switches the map to the standard tile layer.
+   */
   public changeToStandardLayer(): void {
     const map = this.leafletMap!;
     const leaflet = this.Leaflet!;
@@ -804,6 +869,9 @@ export class HaOSM extends ReactiveElement {
     this.layer = createTileLayer(leaflet)?.addTo(map);
   }
 
+  /**
+   * Switches the map to the CyclOSM tile layer.
+   */
   public changeToCyclOSMLayer(): void {
     const map = this.leafletMap!;
     const leaflet = this.Leaflet!;
@@ -813,6 +881,9 @@ export class HaOSM extends ReactiveElement {
     this.layer = cyclOSMTileLayer.addTo(map);
   }
 
+  /**
+   * Switches the map to the CycleMap tile layer.
+   */
   public changeToCycleMapLayer(): void {
     const map = this.leafletMap!;
     const leaflet = this.Leaflet!;
@@ -822,6 +893,9 @@ export class HaOSM extends ReactiveElement {
     this.layer = cyclOSMTileLayer.addTo(map);
   }
 
+  /**
+   * Switches the map to the TransportMap tile layer.
+   */
   public changeToTransportMapLayer(): void {
     const map = this.leafletMap!;
     const leaflet = this.Leaflet!;
@@ -831,6 +905,9 @@ export class HaOSM extends ReactiveElement {
     this.layer = cyclOSMTileLayer.addTo(map);
   }
 
+  /**
+   * Switches the map to the HotMap tile layer.
+   */
   public changeToHotMapLayer(): void {
     const map = this.leafletMap!;
     const leaflet = this.Leaflet!;
@@ -840,6 +917,13 @@ export class HaOSM extends ReactiveElement {
     this.layer = cyclOSMTileLayer.addTo(map);
   }
 
+  /**
+   * Computes the tooltip content for a path point.
+   *
+   * @param path - The path object containing the points and details.
+   * @param point - The specific point on the path to generate the tooltip for.
+   * @returns A string representing the tooltip content for the path point.
+   */
   private _computePathTooltip(path: HaMapPaths, point: HaMapPathPoint): string {
     let formattedTime: string;
     if (path.fullDatetime) {
@@ -864,6 +948,9 @@ export class HaOSM extends ReactiveElement {
     return `${path.name}<br>${formattedTime}`;
   }
 
+  /**
+   * Draws paths on the map, including markers and lines between points.
+   */
   private _drawPaths(): void {
     const hass = this.hass;
     const map = this.leafletMap;
@@ -954,6 +1041,13 @@ export class HaOSM extends ReactiveElement {
     });
   }
 
+  /**
+   * Draws entities and zones on the map, including markers and circles for each.
+   * It handles both active and passive zones, adjusts for dark mode, and includes additional
+   * information like GPS accuracy or custom titles where applicable.
+   *
+   * @returns {void}
+   */
   private _drawEntities(): void {
     const hass = this.hass;
     const map = this.leafletMap;
@@ -1115,6 +1209,11 @@ export class HaOSM extends ReactiveElement {
     this._mapZones.forEach((marker) => map.addLayer(marker));
   }
 
+  /**
+   * Attaches a resize observer to the current element.
+   *
+   * @returns {Promise<void>} Resolves once the observer is attached.
+   */
   private async _attachObserver(): Promise<void> {
     if (!this._resizeObserver) {
       this._resizeObserver = new ResizeObserver(() => {
@@ -1199,7 +1298,6 @@ export class HaOSM extends ReactiveElement {
     `;
   }
 }
-
 declare global {
   interface HTMLElementTagNameMap {
     "ha-osm": HaOSM;

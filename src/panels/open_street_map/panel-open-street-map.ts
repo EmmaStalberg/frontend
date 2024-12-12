@@ -12,6 +12,12 @@ import "../../components/search-input";
 import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
+/**
+ * `OpenStreetMapPanel` is a custom web component that integrates OpenStreetMap
+ * into the Home Assistant user interface.
+ * It provides functionalities for viewing the map, editing zones (admin only),
+ * and interacting with the map's features.
+ */
 @customElement("open-street-map-panel")
 class OpenStreetMapPanel extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -22,6 +28,11 @@ class OpenStreetMapPanel extends LitElement {
 
   @property({ type: Object }) public panel?: { config: object };
 
+  /**
+   * Renders the OpenStreetMap panel content, including the top app bar, map, and zone editing button.
+   *
+   * @returns The HTML template for the panel.
+   */
   protected render() {
     return html`
       <ha-top-app-bar-fixed class="top-bar">
@@ -48,6 +59,12 @@ class OpenStreetMapPanel extends LitElement {
     navigate("/config/zone?historyBack=1");
   }
 
+  /**
+   * Lifecycle method that is invoked before the component updates.
+   * It checks if the `hass` property has changed and stores the previous value.
+   *
+   * @param changedProps The properties that have changed since the last update.
+   */
   public willUpdate(changedProps: PropertyValues) {
     super.willUpdate(changedProps);
     if (!changedProps.has("hass")) {
@@ -56,6 +73,11 @@ class OpenStreetMapPanel extends LitElement {
     const _oldHass = changedProps.get("hass") as HomeAssistant | undefined;
   }
 
+  /**
+   * Defines the styles for the OpenStreetMap panel, including layout and component-specific styling.
+   *
+   * @returns An array of CSS styles for the component.
+   */
   static get styles(): CSSResultGroup {
     return [
       haStyle,
