@@ -27,6 +27,8 @@ const COMPONENTS = {
   iframe: () => import("../panels/iframe/ha-panel-iframe"),
   logbook: () => import("../panels/logbook/ha-panel-logbook"),
   map: () => import("../panels/map/ha-panel-map"),
+  open_street_map: () =>
+    import("../panels/open_street_map/panel-open-street-map"),
   my: () => import("../panels/my/ha-panel-my"),
   profile: () => import("../panels/profile/ha-panel-profile"),
   todo: () => import("../panels/todo/ha-panel-todo"),

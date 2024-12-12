@@ -2,8 +2,8 @@ import {
   mdiImageFilterCenterFocus,
   mdiLayersTriple,
   mdiShare,
+  mdiNearMe,
   mdiNotePlusOutline,
-  mdiMapSearch,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
 import type { LatLngTuple } from "leaflet";
@@ -14,6 +14,7 @@ import memoizeOne from "memoize-one";
 import { getColorByIndex } from "../../../common/color/colors";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import { computeDomain } from "../../../common/entity/compute_domain";
+import { computeStateDomain } from "../../../common/entity/compute_state_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import { deepEqual } from "../../../common/util/deep-equal";
 import parseAspectRatio from "../../../common/util/parse-aspect-ratio";
@@ -21,6 +22,7 @@ import "../../../components/ha-alert";
 import "../../../components/ha-card";
 import "../../../components/ha-icon-button";
 import "../../../components/map/ha-osm";
+import "../../../components/search-input-outlined";
 import type {
   HaOSM,
   HaMapEntity,
@@ -29,7 +31,7 @@ import type {
 } from "../../../components/map/ha-osm";
 import type { HistoryStates } from "../../../data/history";
 import { subscribeHistoryStatesTimeWindow } from "../../../data/history";
-import type { HomeAssistant } from "../../../types";
+import type { HomeAssistant, ServiceCallRequest, ServiceCallResponse } from "../../../types";
 import { findEntities } from "../common/find-entities";
 import {
   hasConfigChanged,
@@ -49,7 +51,10 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-//  import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
+import { logger } from "workbox-core/_private";
+import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
+import { showConfirmationDialog } from "../custom-card-helpers";
+import { showToast } from "../../../util/toast";
 
 export const DEFAULT_HOURS_TO_SHOW = 0;
 export const DEFAULT_ZOOM = 14;
@@ -90,9 +95,9 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
-  @state() private searchResults: any[] = []; // Store search results EMMA
+  @state() private _filter?: string; 
 
-  @state() private _filter?: string; // EMMA
+  @state() private _coordinates: [number, number] | null = null;
 
   public setConfig(config: MapCardConfig): void {
     if (!config) {
@@ -194,13 +199,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             renderPassive
           ></ha-osm>
           <search-input-outlined
-            id="search-bar"
-            .hass=${this.hass}
-            @keydown=${this._handleKeyDown}
-            .label=${this.hass.localize(
-              "ui.panel.lovelace.editor.edit_card.search_cards"
-            )}
-          ></search-input-outlined>
+              id="search-bar"
+              .hass=${this.hass}
+              @value-changed=${this._handleSearchInputChange}
+              @keypress=${this._handleSearchPressed}
+              .label=${this.hass.localize(
+                "ui.panel.lovelace.editor.edit_card.search_cards"
+              )}
+            ></search-input-outlined>  
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -236,8 +242,11 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             ></ha-icon-button-toggle>
             <ha-icon-button-toggle
               .label=${this.hass.localize(
-                `ui.panel.lovelace.cards.map.search_on_map`
+                `ui.panel.lovelace.cards.map.navigation`
               )}
+              .path=${mdiNearMe}
+              style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
+              @click=${this._openNavigationDialog}
             ></ha-icon-button-toggle>
           </ha-icon-button-group>
           <div slot="heading">Dialog Title</div>
@@ -338,7 +347,15 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     }
   }
 
+
+  private _updateMap(coordinates: [number, number]) {
+    const [lat, lon] = coordinates;
+    console.log("Updating map with new coordinates:", lat, lon);
+    this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+  }
+
   protected updated(changedProps: PropertyValues): void {
+    super.updated(changedProps)
     if (this._configEntities?.length) {
       if (!this._subscribed || changedProps.has("_config")) {
         this._unsubscribeHistory();
@@ -380,20 +397,87 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   }
 
   private _shareLocation() {
-    // TODO
+    const currentUrl = window.location.href; // Get the current page URL
+    showConfirmationDialog(this, {
+      title: "Share Link",
+      text: `${currentUrl}`,
+      confirm: async () => {
+        try {
+          await navigator.clipboard.writeText(currentUrl).then(() =>
+            showToast(this, {
+              message: "The URL has been copied to your clipboard!",
+            })
+          ); // Copy URL to clipboard
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error("Failed to copy URL:", error);
+        }
+      },
+    });
+  }
+
+  private _handleSearchInputChange(ev: CustomEvent) {
+    this._filter = ev.detail.value;
+  }
+
+  public async CallServiceWithResponse(serviceRequest: ServiceCallRequest): Promise<string> {
+    try {
+      // call the service as a script.
+      const serviceResponse = await this.hass.connection.sendMessagePromise<ServiceCallResponse>({
+        type: "execute_script",
+        sequence: [{
+          "service": serviceRequest.domain + "." + serviceRequest.service,
+          "data": serviceRequest.serviceData,
+          "target": serviceRequest.target,
+          "response_variable": "service_result"
+        },
+        {
+          "stop": "done",
+          "response_variable": "service_result"
+        }]
+      });
+      // return the service response data or an empty dictionary if no response data was generated.
+      return JSON.stringify(serviceResponse.response)
+
+    } finally { /* empty */ }
+  }
+
+  // With API in frontend
+  private async _handleSearch(event: KeyboardEvent): Promise<void> {
+    if (event.key !== "Enter") return;
+
+    // console.log("ENTER IS PRESSED");
+
+    const searchterm = this._filter?.trim();
+    if (!searchterm) return;
+    await this._map?._handleSearchAction(searchterm);
   }
 
   private _addNode() {
-    // TODO
+    this._map?._handleAddANote();
   }
 
-  // EMMA
-  private async _handleSearch(event: CustomEvent): Promise<void> {
-    //  unsure which of these two below to use?
-    const searchterm = event.detail.value.toLowerCase().trim();
-    this._filter = searchterm;
-    if (!searchterm) return;
+  private async _openNavigationDialog(): Promise<void> {
+    const response = await showMapSearchDialog(this, {});
+    if (!response) return;
+    await this._map?._handleNavigationAction(
+      response[0],
+      response[1],
+      response[2]
+    );
+  }
 
+  private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
+    if (event.key !== "Enter") return;
+
+    console.log("ENTER IS PRESSED");
+    // console.log(this.hass.states["open_street_map.integration"].attributes);
+
+    const searchterm = this._filter?.trim();
+    if (!searchterm) return;
+    console.log("Searching for ", searchterm);
+
+<<<<<<< HEAD
     // call service from core
     // const results = await this.hass.callService("openstreetmap", "search", {
     //  device_id: "open_street_map",
@@ -404,39 +488,132 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       type: "open_street_map/async_handle_search",
       query,
     });
+=======
+    const entityId = Object.values(this.hass.states).find(
+      (stateObj) => 
+        computeStateDomain(stateObj) === "open_street_map"
+    )?.entity_id;
+>>>>>>> 05d2cb295be8709fa97b9c7e66483920a45bc953
 
-    // // Handle errors in some way
-    // if (results.error) {
-    //   this._error = { code: "search_error", message: results.error };
-    //   return;
+    // try using the separate service call requst handler 
+    try {
+      // create service request.
+      const serviceRequest: ServiceCallRequest = {
+        domain: "open_street_map",
+        service: 'get_address_coordinates',
+        serviceData: {
+          entity_id: entityId,
+          query: searchterm,
+        }
+      };
+
+      // call the service, and convert the response to a type.
+      const response = await this.CallServiceWithResponse(serviceRequest);
+      console.log("the coords from special call are ", response)
+
+      // if it works, add map updates here 
+
+    } finally {
+      /** empty */
+    }
+
+    // const get_address_coordinates_event = (
+    //   hass: HomeAssistant,
+    //   entity_id: string | undefined,
+    //   searchTerm: string
+    // ) =>
+    //   hass.callWS<void>({
+    //     type: "open_street_map/async_get_address_coordinates",
+    //     entity_id: entity_id,
+    //     query: searchTerm
+    // });
+
+    // try {
+    //   await get_address_coordinates_event(this.hass, entityId, searchterm)
+    // } finally {
+    //   /** empty */
     // }
 
-    this._mapEntities = results.map((result) => ({
-      entity_id: result.id,
-      color: this._getColor(result.id),
-      name: result.display_name,
-      focus: true,
-    }));
+    // NEW MAYBE JUST USE STATES HERE ????
 
-    // this.searchResults = result; // Store the search results
-    // this._updateMapMarkers();
-    // this._mapItems.forEach((marker) => {
-    //   const markerLabel = marker.options.icon.options.html.toLowerCase();
-    //   // if (markerLabel.includes(searchTerm)) {
-    //   //   marker.setOpacity(1); // Show marker
-    //   // } else {
-    //   //   marker.setOpacity(0.3); // Hide marker
-    //   // }
+    // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
+    // await this.hass.callService("open_street_map", "search", {
+    //   query: searchterm,
     // });
-  }
 
-  _handleKeyDown(event) {
-    // Check if the key pressed is "Enter"
-    if (event.key === "Enter") {
-      console.log("Enter key pressed!");
-      this._handleSearch(event); // Call the search handler
+    // ANOTHER TRY, MIGHT NOT USE
+    // this.hass.bus.on("open_street_map_event", (event) => {
+    //   const { error, results, coordinates } = event.detail;
+
+    //   if (error) {
+    //       console.error("Search Error:", error);
+    //       return;
+    //   }
+
+    //   // Center map around given coordinates retreived from search
+    //   if (coordinates) {
+    //       const [lat, lon] = coordinates;
+    //       this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+    //       console.log("Coordinates found:", lat, lon);
+    //   }
+
+    //   // THIS IS FOR WHEN ADDING THE ENTRE RESULT,
+    //   // BUT MIGHT NEED TO BE IN ANOTHER {}
+    //   if (results) {
+    //       // Handle displaying results, for example, a list of addresses
+    //       console.log("Search results:", results);
+    //   }
+    // });
+
+    // get coordinates 
+    // let coordinates: any;
+
+    try {
+      const coordinates = await this.hass.callService(
+        "open_street_map", 
+        "get_address_coordinates", 
+        {
+          // entity_id: "zone.home",
+          query: searchterm,
+        }
+      );
+      // update map - center around it and add marker
+      // const lat = 57.6915335;
+      // const lon = 11.9571416;
+      if (coordinates) {
+        this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
+      }
+      console.log("the response json is  ", JSON.stringify(coordinates))
+      console.log("coordinates are ", coordinates)
+      const lat = coordinates[0];
+      const lon = coordinates[1];
+      this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
+    } catch(error) {
+      console.log("Could not find coordinates", error)
     }
   }
+
+  // private _subscribeToEvents() {
+  //   if (!this.hass) {
+  //     console.error("Home Assistant instance not available.");
+  //     return;
+  //   }
+
+  //   // Subscribe to events from the backend
+  //   this.hass.connection.subscribeEvents(
+  //     (event) => this._handleBackendEvent(event),
+  //     "open_street_map_event" // Event type from the backend
+  //   );
+  // }
+
+  // private _handleBackendEvent(event: any) {
+  //   console.log("Received event from backend:", event);
+
+  //   if (event.data.type === "get_address_coordinates") {
+  //     const coordinates = event.data.coordinates;
+  //     console.log("Coordinates received:", coordinates);
+  //   }
+  // }
 
   private async _changeLayer(): Promise<void> {
     const response = await showMapLayerDialog(this, {});
@@ -613,6 +790,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       #root {
         position: relative;
         height: 100%;
+      }
+
+      search-input-outlined {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
       }
     `;
   }

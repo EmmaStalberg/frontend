@@ -4,13 +4,14 @@ import type {
   CircleMarker,
   LatLngExpression,
   LatLngTuple,
-  Map,
   Marker,
   Polyline,
+  Map,
 } from "leaflet";
+// eslint-disable-next-line import/no-duplicates
 import { TileLayer } from "leaflet";
 import type { CSSResultGroup, PropertyValues } from "lit";
-import { ReactiveElement, css, html } from "lit";
+import { ReactiveElement, css } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import { formatDateTime } from "../../common/datetime/format_date_time";
 import {
@@ -19,7 +20,7 @@ import {
 } from "../../common/datetime/format_time";
 import type { LeafletModuleType } from "../../common/dom/setup-leaflet-map";
 import {
-  setupLeafletMap,
+  setupOSMMap,
   createCyclOSMTileLayer,
   createTileLayer,
   createCycleMapTileLayer,
@@ -31,9 +32,13 @@ import { computeStateName } from "../../common/entity/compute_state_name";
 import type { HomeAssistant, ThemeMode } from "../../types";
 import { isTouch } from "../../util/is_touch";
 import "../ha-icon-button";
-import "../search-input-outlined"
+import "../search-input";
 import "./ha-entity-marker";
-
+import type { OpenStreetMapPlace } from "../../data/openstreetmap";
+import { reverseGeocode } from "../../data/openstreetmap";
+import { showAlertDialog } from "../../panels/lovelace/custom-card-helpers";
+import { showToast } from "../../util/toast";
+import { showAddNoteDialog } from "../../dialogs/map-layer/show-add-note";
 
 const getEntityId = (entity: string | HaMapEntity): string =>
   typeof entity === "string" ? entity : entity.entity_id;
@@ -83,8 +88,6 @@ export class HaOSM extends ReactiveElement {
 
   @state() private _loaded = false;
 
-  @state() private searchResults: any[] = []; // Store search results EMMA 
-
   public leafletMap?: Map;
 
   private Leaflet?: LeafletModuleType;
@@ -101,17 +104,25 @@ export class HaOSM extends ReactiveElement {
 
   private _mapPaths: Array<Polyline | CircleMarker> = [];
 
-  //EMMA
-  // constructor() {
-  //   super();
-  //   this.attachShadow({ mode: "open" });
-  // }
+  private markers: L.Marker[] = [];
+
+  private _routeLayer: L.GeoJSON | null = null;
+
+  private noteMarkers: L.Marker[] = [];
+
+  // Disable type checking for Map
+  // @ts-ignore
+  private noteData: Map<L.Marker, string> = new Map();
+
+  @state()
+  private _location: [number, number] = [57.7072326, 11.9670171];
+
+  @state() private _places?: OpenStreetMapPlace[] | null;
 
   public connectedCallback(): void {
     super.connectedCallback();
-    // this._initMapAndSearch(); EMMA
     this._loadMap();
-    this._attachObserver();    
+    this._attachObserver();
   }
 
   public disconnectedCallback(): void {
@@ -131,55 +142,6 @@ export class HaOSM extends ReactiveElement {
 
   protected update(changedProps: PropertyValues) {
     super.update(changedProps);
-
-    // if (!this._loaded) {
-    //   return;
-    // }
-    // // let autoFitRequired = false;
-    // const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
-
-    // if (changedProps.has("_loaded") || changedProps.has("entities")) {
-    //   this._drawEntities();
-    //   // autoFitRequired = true;
-    // } else if (this._loaded && oldHass && this.entities) {
-    //   // Check if any state has changed
-    //   for (const entity of this.entities) {
-    //     if (
-    //       oldHass.states[getEntityId(entity)] !==
-    //       this.hass!.states[getEntityId(entity)]
-    //     ) {
-    //       this._drawEntities();
-    //       // autoFitRequired = true;
-    //       break;
-    //     }
-    //   }
-    // }
-
-    // if (changedProps.has("_loaded") || changedProps.has("paths")) {
-    //   this._drawPaths();
-    // }
-
-    // if (changedProps.has("_loaded") || changedProps.has("layers")) {
-    //   this._drawLayers(changedProps.get("layers") as Layer[] | undefined);
-    //   autoFitRequired = true;
-    // }
-
-    // if (changedProps.has("_loaded") || (this.autoFit && autoFitRequired)) {
-    //   this.fitMap();
-    // }
-
-    // if (changedProps.has("zoom")) {
-    //   this.leafletMap!.setZoom(this.zoom);
-    // }
-
-    // if (
-    //   !changedProps.has("themeMode") &&
-    //   (!changedProps.has("hass") ||
-    //     (oldHass && oldHass.themes?.darkMode === this.hass.themes?.darkMode))
-    // ) {
-    //   return;
-    // }
-    // this._updateMapStyle();
   }
 
   private get _darkMode() {
@@ -191,24 +153,6 @@ export class HaOSM extends ReactiveElement {
 
   private _loading = false;
 
-  // //EMMA
-  // private async _initMapAndSearch(): Promise<void> {
-  //   // Create a div container for the map and search input
-  //   const mapContainer = document.createElement('div');
-  //   mapContainer.id = 'map-container';
-
-  //   // Create and append the search-input-outlined component
-  //   const searchInput = document.createElement('search-input-outlined');
-  //   searchInput.setAttribute('id', 'search-input');
-  //   searchInput.setAttribute('placeholder', 'Search for an entity...');
-  //   searchInput.addEventListener('search-input-changed', this._onSearchInputChanged.bind(this));
-
-  //   mapContainer.appendChild(searchInput);
-
-  //   // Add map container to the DOM (assuming there's a shadow root or main container to append to)
-  //   this.shadowRoot.appendChild(mapContainer);
-  // }
-
   private async _loadMap(): Promise<void> {
     if (this._loading) return;
     let map = this.shadowRoot!.getElementById("map");
@@ -219,31 +163,48 @@ export class HaOSM extends ReactiveElement {
     }
     this._loading = true;
     try {
-      [this.leafletMap, this.Leaflet, this.layer] = await setupLeafletMap(map);
+      [this.leafletMap, this.Leaflet, this.layer] = await setupOSMMap(map);
+      this._findCurrentLocation();
       this._loaded = true;
     } finally {
       this._loading = false;
     }
   }
 
+  private _findCurrentLocation(): void {
+    const map = this.leafletMap;
+    const leaflet = this.Leaflet;
+    if (!map || !leaflet) return;
+    map.off("locationfound");
+    map.locate({ setView: true, maxZoom: 13 });
+    map.on("locationfound", (e: L.LocationEvent) => {
+      this._location = [Number(e.latlng.lat), Number(e.latlng.lng)];
+      // this.markers.forEach((marker) => marker.remove());
+      // this.markers = [];
+      const newMarker = leaflet.marker(e.latlng).addTo(map);
+      this.markers.push(newMarker);
+      map.setView(e.latlng);
+    });
+  }
+
+  private async _reverseGeocode() {
+    if (!this._location) {
+      return;
+    }
+    this._places = null;
+    const reverse = await reverseGeocode(this._location, this.hass);
+    this._places = [reverse];
+  }
+
   public fitMap(options?: { zoom?: number; pad?: number }): void {
     if (!this.leafletMap || !this.Leaflet || !this.hass) {
       return;
     }
-
     if (!this._mapFocusItems.length && !this._mapFocusZones.length) {
       const map = this.leafletMap;
+      if (!map) return;
+      // Re-trigger location detection
       map.locate({ setView: true, maxZoom: 13 });
-      map.on("locationfound", (e: L.LocationEvent) => {
-        map.setView(e.latlng);
-      });
-      // this.leafletMap.setView(
-      //   new this.Leaflet.LatLng(
-      //     this.hass.config.latitude,
-      //     this.hass.config.longitude
-      //   ),
-      //   options?.zoom || this.zoom
-      // );
       return;
     }
 
@@ -257,15 +218,566 @@ export class HaOSM extends ReactiveElement {
       bounds.extend("getBounds" in zone ? zone.getBounds() : zone.getLatLng());
     });
 
-    // this.layer?.forEach((layer: any) => {
-    //   bounds.extend(
-    //     "getBounds" in layer ? layer.getBounds() : layer.getLatLng()
-    //   );
-    // });
-
     bounds = bounds.pad(options?.pad ?? 0.5);
 
     this.leafletMap.fitBounds(bounds, { maxZoom: options?.zoom || this.zoom });
+  }
+
+  // Note! This works for one pair of coordinates. If one want to later make this work for several
+  // coordinates at once, it needs to be updated similar to fitMap
+  public fitMapToCoordinates(
+    coordinates: LatLngTuple,
+    options?: { zoom?: number; pad?: number }
+  ): void {
+    if (!this.leafletMap || !this.Leaflet || !this.hass) {
+      return;
+    }
+
+    const [lat, lon] = coordinates;
+
+    this.leafletMap.setView(
+      new this.Leaflet.LatLng(lat, lon),
+      options?.zoom || this.zoom
+    );
+
+    // Clear previoud markers
+    this._clearRouteLayer();
+    const foundAddress = this.Leaflet.marker([lat, lon]).addTo(this.leafletMap);
+    this.markers.push(foundAddress);
+  }
+
+  async fetchApiJson(url: string): Promise<any> {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const jsonData = await response.json();
+    return jsonData;
+  }
+
+  private async _fetchAdressInfo(searchterm: string): Promise<any> {
+    try {
+      const data = await this.fetchApiJson(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchterm)}&format=json&polygon=1&addressdetails=1`
+      );
+      if (!data || data.length === 0) {
+        showAlertDialog(this, {
+          title: "Oops, we can't find this place!",
+          text: "Please try a new place!",
+          warning: true,
+        });
+        return null;
+      }
+      const node = data[0];
+      return node;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Error fetching coordinates:", error);
+      return null; // Return null or handle the error as needed
+    }
+  }
+
+  public async _handleSearchAction(searchterm: string) {
+    // Search action
+    if (!searchterm) return;
+    const data = await this._fetchAdressInfo(searchterm);
+    if (!data) return;
+    // Extract latitudes and longitudes
+    const latValues = data.lat;
+    const lonValues = data.lon;
+
+    const leaflet = this.Leaflet;
+    const map = this.leafletMap;
+    if (!map || !leaflet) return;
+    map.setView([latValues, lonValues], this.zoom);
+    // Clear previoud markers
+    this._clearRouteLayer();
+    const foundAddress = leaflet.marker([latValues, lonValues]).addTo(map);
+    // Create popup content
+    const popupContent = `
+      <div>
+        <strong>${data.name || "Unknown Location"}</strong><br/>
+        ${data.display_name || "No address available"}
+      </div>
+    `;
+
+    // Bind popup to the marker
+    foundAddress.bindPopup(popupContent).openPopup();
+    this.markers.push(foundAddress);
+  }
+
+  private _clearRouteLayer() {
+    // Clear previoud markers
+    this.markers.forEach((marker) => marker.remove());
+    this.markers = [];
+    if (this._routeLayer) {
+      this.leafletMap?.removeLayer(this._routeLayer); // Remove the route from the map
+      this._routeLayer = null; // Reset the reference
+    }
+    this.noteMarkers.forEach((marker) => {
+      marker.closePopup();
+    });
+  }
+
+  public _handleAddANote() {
+    const map = this.leafletMap;
+    const leaflet = this.Leaflet;
+    if (!map || !leaflet) return;
+
+    // Create a red marker icon
+    const redIcon = leaflet.icon({
+      iconUrl: "https://img.icons8.com/ios-filled/50/FA5252/marker.png", // URL for red marker icon
+      iconSize: [35, 41], // Size of the icon
+      iconAnchor: [12, 41], // Anchor point of the icon
+      popupAnchor: [1, -34], // Anchor point of the popup relative to the icon
+    });
+
+    // Create a marker at the center of the map
+    const initialLatLng = map.getCenter();
+    const noteMarker = leaflet
+      .marker(initialLatLng, { icon: redIcon, draggable: true }) // Make the marker draggable
+      .addTo(map);
+
+    // Bind popup to the marker
+    // noteMarker
+    //   .bindPopup(
+    //     `
+    //     <div>
+    //       <strong>Note:</strong>No note added<br/>
+    //       Drag this marker to the desired location.<br/>
+    //        <button id="add-note" style="margin-top: 5px;">Add Note</button>
+    //       <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
+    //     </div>
+    //   `
+    //   )
+    //   .openPopup();
+
+    // Add the marker to the noteMarkers array for tracking
+    this.noteMarkers.push(noteMarker);
+    this.noteData.set(noteMarker, "");
+
+    // Bind popup with Add Note button
+    const updatePopupContent = (note: string = "No note added yet.") => {
+      noteMarker
+        .bindPopup(
+          `
+      <div>
+        <strong>Note:</strong> <span id="note-content">${note}</span><br/>
+        Drag this marker to the desired location.<br/>
+        <button id="add-note" style="margin-top: 5px;">Add Note</button>
+        <button id="remove-note" style="margin-top: 5px; color: red;">Remove Note</button>
+      </div>
+    `
+        )
+        .openPopup();
+    };
+
+    // Add click event to remove the marker
+    noteMarker.on("popupopen", () => {
+      // Add event listener for the "Remove Note" button
+      const popupContent = noteMarker.getPopup()?.getElement();
+      if (!popupContent) {
+        // eslint-disable-next-line no-console
+        console.error("Popup content not found");
+        return;
+      }
+      const note = this.noteData.get(noteMarker) || "No note added yet.";
+      // Update the popup content dynamically
+      const noteElement = popupContent.querySelector(
+        "#note-content"
+      ) as HTMLElement;
+      if (noteElement) {
+        noteElement.textContent = note;
+        updatePopupContent(note);
+      }
+
+      // Add note button functionality
+      const addNoteButton = popupContent.querySelector(
+        "#add-note"
+      ) as HTMLElement;
+      if (!addNoteButton) {
+        // eslint-disable-next-line no-console
+        console.error("Add note button not found in popup");
+        return;
+      }
+      addNoteButton.addEventListener("click", async () => {
+        const response = await showAddNoteDialog(this, {});
+        this.noteData.set(noteMarker, response || ""); // Update the note in the Map
+        noteMarker.closePopup();
+      });
+
+      const removeButton = popupContent.querySelector(
+        "#remove-note"
+      ) as HTMLElement;
+      if (!removeButton) {
+        // eslint-disable-next-line no-console
+        console.error("Remove button not found in popup");
+        return;
+      }
+
+      // Add event listener for the "Remove Note" button
+      removeButton.addEventListener("click", () => {
+        // Remove the marker from the map and the array
+        map.removeLayer(noteMarker);
+        this.noteMarkers = this.noteMarkers.filter(
+          (marker) => marker !== noteMarker
+        );
+        this.noteData.delete(noteMarker);
+      });
+    });
+
+    // Add dragend event to update marker position
+    noteMarker.on("dragend", () => {
+      const { lat, lng } = noteMarker.getLatLng();
+      // eslint-disable-next-line no-console
+      console.log(`Marker moved to: ${lat}, ${lng}`);
+    });
+    updatePopupContent();
+  }
+
+  public async _handleNavigationAction(
+    // Show direction function
+    startPoint: string,
+    endPoint: string,
+    transportMode: string
+  ) {
+    let startInfo: { name: string; lat: number; lon: number } | null = null;
+    let endInfo: { name: string; lat: number; lon: number } | null = null;
+    if (startPoint === "") {
+      startInfo = {
+        name: "Current location",
+        lat: this._location[0],
+        lon: this._location[1],
+      };
+    } else {
+      const fetchedStart = await this._fetchAdressInfo(startPoint);
+      if (!fetchedStart) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to fetch start coordinates.");
+        return; // Exit if start coordinates couldn't be fetched
+      }
+      startInfo = {
+        name: fetchedStart.name,
+        lat: fetchedStart.lat,
+        lon: fetchedStart.lon,
+      };
+    }
+    if (endPoint === "") {
+      endInfo = {
+        name: "Current location",
+        lat: this._location[0],
+        lon: this._location[1],
+      };
+    } else {
+      const fetchedEnd = await this._fetchAdressInfo(endPoint);
+      if (!fetchedEnd) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to fetch end coordinates.");
+        return; // Exit if end coordinates couldn't be fetched
+      }
+      endInfo = {
+        name: fetchedEnd.name,
+        lat: fetchedEnd.lat,
+        lon: fetchedEnd.lon,
+      };
+    }
+    if (startInfo.lat === endInfo.lat && startInfo.lon === endInfo.lon) {
+      showToast(this, {
+        message: "Please provide a valid destination!",
+      });
+      return;
+    }
+
+    try {
+      const { route, duration, distance, steps } = await this._fetchRoute(
+        [startInfo.lat, startInfo.lon],
+        [endInfo.lat, endInfo.lon],
+        transportMode
+      );
+      const leaflet = this.Leaflet;
+      const map = this.leafletMap;
+      if (!map || !leaflet) return;
+      this._clearRouteLayer();
+      // Display the route on the map
+      this._routeLayer = leaflet
+        .geoJSON(route, {
+          style: { color: "blue", weight: 5 },
+        })
+        .addTo(map);
+
+      // Add start and end markers
+      const startMarker = leaflet
+        .marker([startInfo.lat, startInfo.lon])
+        .addTo(map);
+      startMarker.bindPopup("Start Point").openPopup();
+      const endMarker = leaflet.marker([endInfo.lat, endInfo.lon]).addTo(map);
+      endMarker.bindPopup("End Point");
+      this.markers.push(startMarker);
+      this.markers.push(endMarker);
+      // Show step by step distance
+      this.renderSidePanel({ steps, distance, duration });
+      // Fit the map bounds to the route
+      map.fitBounds(this._routeLayer.getBounds());
+
+      // Click to show restaurants
+      const startRestaurants = await this._fetchRestaurantsNearLocation([
+        startInfo.lat,
+        startInfo.lon,
+      ]);
+      const endRestaurants = await this._fetchRestaurantsNearLocation([
+        endInfo.lat,
+        endInfo.lon,
+      ]);
+      this._addRestaurantMarkers(startRestaurants);
+      this._addRestaurantMarkers(endRestaurants);
+      this._routeLayer.on("click", (e: any) =>
+        this._handleRouteClick(e.latlng)
+      );
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Error fetching or displaying route:", error);
+    }
+  }
+
+  private renderSidePanel(routeData: {
+    steps: any[];
+    distance: string;
+    duration: string;
+  }) {
+    // Remove existing panel if any
+    const existingPanel = document.getElementById("directions-panel");
+    if (existingPanel) {
+      existingPanel.remove();
+    }
+
+    // Create the side panel
+    const sidePanel = document.createElement("div");
+    sidePanel.id = "directions-panel";
+    sidePanel.style.cssText = `
+      position: fixed;
+      right: 1%;
+      top: 15%;;
+      height: 70%;
+      width: 300px;
+      background: white;
+      border-left: 1px solid #ccc;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    `;
+    const distanceTotal = Number(routeData.distance);
+    const durationTotal = Number(routeData.duration);
+    const formattedDistance =
+      distanceTotal < 1000
+        ? `${Math.round(distanceTotal)} m`
+        : `${(distanceTotal / 1000).toFixed(1)} km`;
+    const formattedDuration =
+      durationTotal >= 3600
+        ? `${Math.floor(durationTotal / 3600)}h ${Math.floor((durationTotal % 3600) / 60)}min`
+        : `${Math.floor(durationTotal / 60)} min`;
+
+    // Add header
+    sidePanel.innerHTML = `
+      <h2 style="margin-top: 0;">Directions</h2>
+      <p><strong>Distance:</strong> ${formattedDistance}</p>
+      <p><strong>Time:</strong> ${formattedDuration}</p>
+      <hr />
+    `;
+
+    // Add steps
+    routeData.steps.forEach((step, index) => {
+      // const instruction =
+      //   step.maneuver.type + " " + step.maneuver.modifier + " " + step.name ||
+      //   "Continue straight";
+      // Construct the instruction text
+      let instruction = "";
+      const maneuver = step.maneuver;
+      const direction = maneuver.type || "Continue"; // Maneuver type (e.g., "turn-left")
+      const modifier = maneuver.modifier || ""; // Directional modifier (e.g., "left", "right")
+      const street = step.name || ""; // Street name (e.g., "Chalmers Tvärgata")
+
+      if (modifier) {
+        instruction = `${direction.charAt(0).toUpperCase() + direction.slice(1)} ${modifier} onto ${street}`;
+      } else if (street) {
+        instruction = `Continue onto ${street}`;
+      } else {
+        instruction = "Continue straight";
+      }
+
+      const distance = (step.distance / 1000).toFixed(2) + " km";
+
+      const stepElement = document.createElement("div");
+      stepElement.style.cssText = `
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+      `;
+      stepElement.innerHTML = `
+        <strong>${index + 1}. ${instruction}</strong><br />
+        <small>${distance}</small>
+      `;
+
+      sidePanel.appendChild(stepElement);
+    });
+
+    // Add close button
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "Close";
+    closeButton.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+    `;
+    closeButton.addEventListener("click", () => {
+      sidePanel.remove();
+      this._clearRouteLayer();
+    });
+
+    sidePanel.appendChild(closeButton);
+
+    // Append to body
+    document.body.appendChild(sidePanel);
+  }
+
+  private async _handleRouteClick(latlng: { lat: number; lng: number }) {
+    try {
+      const nearbyRestaurants = await this._fetchRestaurantsNearLocation([
+        latlng.lat,
+        latlng.lng,
+      ]);
+      this._addRestaurantMarkers(nearbyRestaurants);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Error fetching nearby restaurants:", error);
+    }
+  }
+
+  private async _addRestaurantMarkers(restaurants: any[]) {
+    const leaflet = this.Leaflet;
+    const map = this.leafletMap;
+    if (!map || !leaflet) return;
+    const _icon = leaflet.icon({
+      iconUrl: "https://img.icons8.com/glyph-neue/64/meal.png", // Restaurant icon
+      iconSize: [25, 25],
+      iconAnchor: [12, 25],
+      popupAnchor: [0, -20],
+    });
+    restaurants.forEach((restaurant) => {
+      const marker = leaflet
+        .marker([restaurant.lat, restaurant.lon], { icon: _icon })
+        .addTo(map);
+      // marker.bindPopup(
+      //   `<b>${restaurant.tags.name || "Unnamed Restaurant"}</b>`
+      // );
+
+      marker.on("click", async () => {
+        const details = await this._showRestaurantDetails(
+          restaurant.lat,
+          restaurant.lon
+        );
+        const popupContent = this._generatePopupContent(details);
+        marker.bindPopup(popupContent).openPopup();
+      });
+      this.markers.push(marker);
+    });
+  }
+
+  private async _showRestaurantDetails(lat: number, lon: number): Promise<any> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
+      const details = await this.fetchApiJson(url);
+      return details;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Error fetching restaurant details:", error);
+      return null;
+    }
+  }
+
+  private _generatePopupContent(details: any): string {
+    if (!details) {
+      return "<strong>Unable to fetch details</strong>";
+    }
+
+    const name = details.name || "Unnamed Restaurant";
+    const type = details.type || "Unknown Type";
+    const phone = details.extratags?.phone || "Not available";
+    const address = details.display_name || "Unknown Address";
+    const website = details.extratags?.website
+      ? `<a href="${details.extratags.website}" target="_blank">${details.extratags.website}</a>`
+      : "Not available";
+
+    return `
+      <div>
+        <h3>${name}</h3>
+        <p><strong>Type:</strong> ${type}</p>
+        <p><strong>Address:</strong> ${address}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Website:</strong> ${website}</p>
+      </div>
+    `;
+  }
+
+  private async _fetchRestaurantsNearLocation(
+    location: [number, number]
+  ): Promise<any[]> {
+    const [lat, lon] = location;
+    try {
+      // Query restaurants within a 500m radius (adjust as needed)
+      const data = await this.fetchApiJson(
+        `https://overpass-api.de/api/interpreter?data=[out:json];node["amenity"="restaurant"](around:500,${lat},${lon});out;`
+      );
+
+      const validRestaurants = data.elements.filter(
+        (restaurant: any) => restaurant.tags && restaurant.tags.name
+      );
+      // Limit the number of restaurants to `count`
+      return validRestaurants.slice(0, 6);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Error fetching restaurants:", error);
+      return [];
+    }
+  }
+
+  async _fetchRoute(
+    start: [number, number],
+    end: [number, number],
+    transportMode: string
+  ) {
+    const transport_mode =
+      transportMode === "car"
+        ? "car"
+        : transportMode === "bicycle"
+          ? "bike"
+          : "foot";
+
+    const [startLat, startLon] = start;
+    const [endLat, endLon] = end;
+    // https://routing.openstreetmap.de/routed-foot/route/v1/driving/11.97652589525446,57.6897462;11.9634657,57.7040307?overview=false&geometries=polyline&steps=true&
+    const url = `https://routing.openstreetmap.de/routed-${transport_mode}/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson&steps=true`;
+    const data = await this.fetchApiJson(url);
+
+    if (data.routes && data.routes.length > 0) {
+      const route = data.routes[0];
+      return {
+        route: route.geometry,
+        duration: route.duration, // Duration in seconds
+        distance: route.distance, // Distance in meters
+        steps: route.legs[0]?.steps,
+      };
+    }
+    throw new Error("No route found");
   }
 
   public fitBounds(
@@ -442,20 +954,6 @@ export class HaOSM extends ReactiveElement {
     });
   }
 
-  // EMMA 
-  // render() {
-  //   return html`
-  //     <div id="map-container">
-  //       <search-input-outlined
-  //         id="search-input"
-  //         placeholder="Search for an adress or place..."
-  //         @value-changed=${this._onSearchInputChanged}
-  //       ></search-input-outlined>
-  //       <div id="map"></div>
-  //     </div>
-  //   `;
-  // }
-
   private _drawEntities(): void {
     const hass = this.hass;
     const map = this.leafletMap;
@@ -611,22 +1109,10 @@ export class HaOSM extends ReactiveElement {
           })
         );
       }
-
-      //EMMA
-      const { name } = entity; // how to get this properly? need to get "name" of search here
-      if (!latitude || !longitude) continue;
-  
-      const markerSearch = Leaflet.marker([latitude, longitude], {
-        title: name,
-      });
-  
-      this._mapItems.push(markerSearch);
-      map.addLayer(markerSearch);
     }
 
     this._mapItems.forEach((marker) => map.addLayer(marker));
     this._mapZones.forEach((marker) => map.addLayer(marker));
-    
   }
 
   private async _attachObserver(): Promise<void> {
@@ -637,46 +1123,6 @@ export class HaOSM extends ReactiveElement {
     }
     this._resizeObserver.observe(this);
   }
-
-  //EMMA
-  // private async _onSearchInputChanged(event: CustomEvent) {
-  //   const searchterm = event.detail.value.toLowerCase().trim();
-  //   if (!searchterm) return;
-
-  //   // call service from core 
-  //   const result = await this.hass.callService("openstreetmap", "search", {
-  //     searchterm,
-  //   });
-
-  //   if (result.error) {
-  //     console.error("Search error:", result.error);
-  //     return;
-  //   }
-
-  //   this.searchResults = result; // Store the search results
-  //   this._updateMapMarkers();
-  //   // this._mapItems.forEach((marker) => {
-  //   //   const markerLabel = marker.options.icon.options.html.toLowerCase();
-  //   //   // if (markerLabel.includes(searchTerm)) {
-  //   //   //   marker.setOpacity(1); // Show marker
-  //   //   // } else {
-  //   //   //   marker.setOpacity(0.3); // Hide marker
-  //   //   // }
-  //   // });
-  // }
-
-  // //EMMA
-  // private _updateMapMarkers() {
-  //   const map = this.shadowRoot?.querySelector("#map");
-  //   if (!map) return;
-
-  //   // Clear existing markers (if any)
-  //   // Add new markers based on the search results
-  //   this.searchResults.forEach((result) => {
-  //     const marker = L.marker([result.lat, result.lon]);
-  //     marker.addTo(map);
-  //   });
-  // }
 
   static get styles(): CSSResultGroup {
     return css`
@@ -705,11 +1151,6 @@ export class HaOSM extends ReactiveElement {
         cursor: -moz-grabbing;
         cursor: -webkit-grabbing;
       }
-      /* //EMMA
-      #map-container {
-        position: relative;
-        height: 100%;
-      } */
       .leaflet-tile-pane {
         filter: var(--map-filter);
       }
@@ -752,14 +1193,8 @@ export class HaOSM extends ReactiveElement {
         box-shadow: none !important;
         text-align: center;
       }
-      //EMMA
-      search-input-outlined {
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        width: 300px;
+      .leaflet-control {
+        margin-top: 50px; /* Move zoom controls down */
       }
     `;
   }
