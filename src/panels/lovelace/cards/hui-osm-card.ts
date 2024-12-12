@@ -2,7 +2,7 @@ import {
   mdiImageFilterCenterFocus,
   mdiLayersTriple,
   mdiShare,
-  mdiNearMe,
+  mdiDirections,
   mdiNotePlusOutline,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
@@ -244,7 +244,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               .label=${this.hass.localize(
                 `ui.panel.lovelace.cards.map.navigation`
               )}
-              .path=${mdiNearMe}
+              .path=${mdiDirections}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
               @click=${this._openNavigationDialog}
             ></ha-icon-button-toggle>
