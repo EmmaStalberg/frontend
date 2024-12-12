@@ -12,6 +12,12 @@ import "../../components/search-input";
 import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
+/**
+ * Represents the OpenStreetMap panel in the Home Assistant interface.
+ * This component integrates a map and provides a search functionality to interact with OpenStreetMap data.
+ * It is responsible for displaying the map, allowing zone editing (for admins), and handling search functionality.
+ */
+
 @customElement("open-street-map-panel")
 class OpenStreetMapPanel extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -58,33 +64,19 @@ class OpenStreetMapPanel extends LitElement {
     `;
   }
 
-  //  Add back over
-  // search-input if needed.
-
-  // Maybe needed to update when searching??
-  // <search-input
-  //       .filter=${this.searchTerm}
-  //       @value-changed=${this._handleSearch}
-  //       label="Search for an address"
-  //       .hass=${this.hass}
-  //       autofocus
-  //     ></search-input>
-  //     <div class="results">
-  //       ${this.results.map(
-  //         (result) => html`<div class="result-item">${result.display_name}</div>`
-  //       )}
-  //     </div>
-  //   `;
-
-  // eslint-disable-next-line spaced-comment
+  /**
+   * Handles the search input and triggers the OpenStreetMap search service.
+   * When the user enters a search term, the method sends a request to the Home Assistant backend
+   * to search for the address or location in OpenStreetMap.
+   *
+   * @param event The custom event containing the search term.
+   */
   //EMMA - also check hui osm card
   private async _handleSearch(event: CustomEvent): Promise<void> {
     const searchterm = event.detail.value.toLowerCase().trim();
     this._filter = searchterm;
     if (!searchterm) return;
 
-    // call service from core
-    // eslint-disable-next-line unused-imports/no-unused-vars
     const results = await this.hass.callService("openstreetmap", "search", {
       query: searchterm,
     });
@@ -94,6 +86,13 @@ class OpenStreetMapPanel extends LitElement {
     navigate("/config/zone?historyBack=1");
   }
 
+  /**
+   * Lifecycle method that runs before the component updates.
+   * It checks if the Home Assistant instance (`hass`) has changed and stores the previous value.
+   * This can be useful for handling changes in the Home Assistant instance.
+   *
+   * @param changedProps The properties that have changed.
+   */
   public willUpdate(changedProps: PropertyValues) {
     super.willUpdate(changedProps);
     if (!changedProps.has("hass")) {
@@ -102,8 +101,13 @@ class OpenStreetMapPanel extends LitElement {
     const _oldHass = changedProps.get("hass") as HomeAssistant | undefined;
   }
 
+  /**
+   * Defines the styles for the OpenStreetMap panel.
+   * This includes styling for the map and the search bar's positioning.
+   *
+   * @returns An array of CSS styles applied to the component.
+   */
   "Added .top-bar and search-input to try and place search-input to the left";
-
   static get styles(): CSSResultGroup {
     return [
       haStyle,
