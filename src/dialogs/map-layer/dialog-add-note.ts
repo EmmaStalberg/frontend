@@ -28,7 +28,7 @@ export class DialogAddNote
     this._dialogParams = dialogParams;
     this._existingNote = dialogParams.existingNote || "";
     const noteTest = this._existingNote;
-    console.log("existing note is ", noteTest)
+    console.log("existing note is this ", this._dialogParams.existingNote)
     await this.updateComplete;
   }
 

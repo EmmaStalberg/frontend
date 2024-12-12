@@ -403,8 +403,10 @@ export class HaOSM extends ReactiveElement {
         return;
       }
       addNoteButton.addEventListener("click", async () => {
-        const response = await showAddNoteDialog(this, {existingNote: this.noteData});
+        console.log("första ", this.noteData.get(noteMarker))
+        const response = await showAddNoteDialog(this, {existingNote: this.noteData.get(noteMarker)});
         this.noteData.set(noteMarker, response || ""); // Update the note in the Map
+        console.log("dnotedata ", this.noteData.response)
         noteMarker.closePopup();
       });
 

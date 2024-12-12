@@ -19,6 +19,7 @@ export const showAddNoteDialog = (
       dialogImport: () => import("./dialog-add-note"),
       dialogParams: {
         ...dialogParams,
+        existingNote: dialogParams.existingNote || "",
         cancel: () => {
           resolve(null);
           if (origCancel) {
