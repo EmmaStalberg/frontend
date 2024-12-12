@@ -31,7 +31,11 @@ import type {
 } from "../../../components/map/ha-osm";
 import type { HistoryStates } from "../../../data/history";
 import { subscribeHistoryStatesTimeWindow } from "../../../data/history";
-import type { HomeAssistant, ServiceCallRequest, ServiceCallResponse } from "../../../types";
+import type {
+  HomeAssistant,
+  ServiceCallRequest,
+  ServiceCallResponse,
+} from "../../../types";
 import { findEntities } from "../common/find-entities";
 import {
   hasConfigChanged,
@@ -95,7 +99,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
-  @state() private _filter?: string; 
+  @state() private _filter?: string;
 
   @state() private _coordinates: [number, number] | null = null;
 
@@ -199,14 +203,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             renderPassive
           ></ha-osm>
           <search-input-outlined
-              id="search-bar"
-              .hass=${this.hass}
-              @value-changed=${this._handleSearchInputChange}
-              @keypress=${this._handleSearchPressed}
-              .label=${this.hass.localize(
-                "ui.panel.lovelace.editor.edit_card.search_cards"
-              )}
-            ></search-input-outlined>  
+            id="search-bar"
+            .hass=${this.hass}
+            @value-changed=${this._handleSearchInputChange}
+            @keypress=${this._handleSearchPressed}
+            .label=${this.hass.localize(
+              "ui.panel.lovelace.editor.edit_card.search_cards"
+            )}
+          ></search-input-outlined>
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -347,7 +351,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     }
   }
 
-
   private _updateMap(coordinates: [number, number]) {
     const [lat, lon] = coordinates;
     console.log("Updating map with new coordinates:", lat, lon);
@@ -355,7 +358,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   }
 
   protected updated(changedProps: PropertyValues): void {
-    super.updated(changedProps)
+    super.updated(changedProps);
     if (this._configEntities?.length) {
       if (!this._subscribed || changedProps.has("_config")) {
         this._unsubscribeHistory();
@@ -396,6 +399,12 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._map?.fitMap();
   }
 
+  /**
+   * Shares the current page URL by copying it to the clipboard.
+   * Displays a confirmation dialog and attempts to copy the URL when confirmed.
+   * If successful, a toast notification is shown to inform the user.
+   * If it fails, an error is logged in the console.
+   */
   private _shareLocation() {
     const currentUrl = window.location.href; // Get the current page URL
     showConfirmationDialog(this, {
@@ -416,32 +425,57 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     });
   }
 
+  /**
+   * Handles the change of the search input value.
+   * Updates the filter value based on the event detail value.
+   *
+   * @param ev - The custom event containing the new search input value.
+   */
   private _handleSearchInputChange(ev: CustomEvent) {
     this._filter = ev.detail.value;
   }
 
-  public async CallServiceWithResponse(serviceRequest: ServiceCallRequest): Promise<string> {
+  /**
+   * Calls a service and waits for the response.
+   * Executes a script using the provided service request and returns the service response data as a string.
+   *
+   * @param serviceRequest - The service call request containing domain, service, and other parameters.
+   * @returns A promise that resolves to the service response data as a string.
+   */
+  public async CallServiceWithResponse(
+    serviceRequest: ServiceCallRequest
+  ): Promise<string> {
     try {
       // call the service as a script.
-      const serviceResponse = await this.hass.connection.sendMessagePromise<ServiceCallResponse>({
-        type: "execute_script",
-        sequence: [{
-          "service": serviceRequest.domain + "." + serviceRequest.service,
-          "data": serviceRequest.serviceData,
-          "target": serviceRequest.target,
-          "response_variable": "service_result"
-        },
-        {
-          "stop": "done",
-          "response_variable": "service_result"
-        }]
-      });
+      const serviceResponse =
+        await this.hass.connection.sendMessagePromise<ServiceCallResponse>({
+          type: "execute_script",
+          sequence: [
+            {
+              service: serviceRequest.domain + "." + serviceRequest.service,
+              data: serviceRequest.serviceData,
+              target: serviceRequest.target,
+              response_variable: "service_result",
+            },
+            {
+              stop: "done",
+              response_variable: "service_result",
+            },
+          ],
+        });
       // return the service response data or an empty dictionary if no response data was generated.
-      return JSON.stringify(serviceResponse.response)
-
-    } finally { /* empty */ }
+      return JSON.stringify(serviceResponse.response);
+    } finally {
+      /* empty */
+    }
   }
 
+  /**
+   * Handles the search action when the "Enter" key is pressed.
+   * If the search term is valid, triggers a search action on the map with the given search term.
+   *
+   * @param event - The keyboard event triggered by pressing a key.
+   */
   // With API in frontend
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
@@ -453,10 +487,18 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     await this._map?._handleSearchAction(searchterm);
   }
 
+  /**
+   * Adds a node to the map.
+   * Triggers the map's action to add a note or node.
+   */
   private _addNode() {
     this._map?._handleAddANote();
   }
 
+  /**
+   * Opens a navigation dialog to allow the user to choose a navigation action.
+   * After the user responds, the map's navigation action is triggered.
+   */
   private async _openNavigationDialog(): Promise<void> {
     const response = await showMapSearchDialog(this, {});
     if (!response) return;
@@ -467,6 +509,15 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     );
   }
 
+  /**
+   * Handles the event when the "Enter" key is pressed in the search input.
+   * If a valid search term is provided, it attempts to retrieve the coordinates for the given address using two methods:
+   * 1. A custom service call to get the coordinates.
+   * 2. A direct service call using the Home Assistant API.
+   * Updates the map with the retrieved coordinates.
+   *
+   * @param event - The keyboard event triggered by pressing a key.
+   */
   private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
@@ -477,144 +528,60 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     if (!searchterm) return;
     console.log("Searching for ", searchterm);
 
-<<<<<<< HEAD
-    // call service from core
-    // const results = await this.hass.callService("openstreetmap", "search", {
-    //  device_id: "open_street_map",
-    //  query: searchterm,
-    // });
-
-    const results = await this.hass.callWS({
-      type: "open_street_map/async_handle_search",
-      query,
-    });
-=======
     const entityId = Object.values(this.hass.states).find(
-      (stateObj) => 
-        computeStateDomain(stateObj) === "open_street_map"
+      (stateObj) => computeStateDomain(stateObj) === "open_street_map"
     )?.entity_id;
->>>>>>> 05d2cb295be8709fa97b9c7e66483920a45bc953
 
-    // try using the separate service call requst handler 
+    // try using the separate service call requst handler
     try {
       // create service request.
       const serviceRequest: ServiceCallRequest = {
         domain: "open_street_map",
-        service: 'get_address_coordinates',
+        service: "get_address_coordinates",
         serviceData: {
           entity_id: entityId,
           query: searchterm,
-        }
+        },
       };
 
       // call the service, and convert the response to a type.
       const response = await this.CallServiceWithResponse(serviceRequest);
-      console.log("the coords from special call are ", response)
+      console.log("the coords from special call are ", response);
 
-      // if it works, add map updates here 
-
+      // if it works, add map updates here
     } finally {
       /** empty */
     }
 
-    // const get_address_coordinates_event = (
-    //   hass: HomeAssistant,
-    //   entity_id: string | undefined,
-    //   searchTerm: string
-    // ) =>
-    //   hass.callWS<void>({
-    //     type: "open_street_map/async_get_address_coordinates",
-    //     entity_id: entity_id,
-    //     query: searchTerm
-    // });
-
-    // try {
-    //   await get_address_coordinates_event(this.hass, entityId, searchterm)
-    // } finally {
-    //   /** empty */
-    // }
-
-    // NEW MAYBE JUST USE STATES HERE ????
-
-    // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
-    // await this.hass.callService("open_street_map", "search", {
-    //   query: searchterm,
-    // });
-
-    // ANOTHER TRY, MIGHT NOT USE
-    // this.hass.bus.on("open_street_map_event", (event) => {
-    //   const { error, results, coordinates } = event.detail;
-
-    //   if (error) {
-    //       console.error("Search Error:", error);
-    //       return;
-    //   }
-
-    //   // Center map around given coordinates retreived from search
-    //   if (coordinates) {
-    //       const [lat, lon] = coordinates;
-    //       this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
-    //       console.log("Coordinates found:", lat, lon);
-    //   }
-
-    //   // THIS IS FOR WHEN ADDING THE ENTRE RESULT,
-    //   // BUT MIGHT NEED TO BE IN ANOTHER {}
-    //   if (results) {
-    //       // Handle displaying results, for example, a list of addresses
-    //       console.log("Search results:", results);
-    //   }
-    // });
-
-    // get coordinates 
-    // let coordinates: any;
-
     try {
       const coordinates = await this.hass.callService(
-        "open_street_map", 
-        "get_address_coordinates", 
+        "open_street_map",
+        "get_address_coordinates",
         {
           // entity_id: "zone.home",
           query: searchterm,
         }
       );
-      // update map - center around it and add marker
-      // const lat = 57.6915335;
-      // const lon = 11.9571416;
+
       if (coordinates) {
         this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
       }
-      console.log("the response json is  ", JSON.stringify(coordinates))
-      console.log("coordinates are ", coordinates)
+      console.log("the response json is  ", JSON.stringify(coordinates));
+      console.log("coordinates are ", coordinates);
       const lat = coordinates[0];
       const lon = coordinates[1];
-      this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
-    } catch(error) {
-      console.log("Could not find coordinates", error)
+      this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+    } catch (error) {
+      console.log("Could not find coordinates", error);
     }
   }
 
-  // private _subscribeToEvents() {
-  //   if (!this.hass) {
-  //     console.error("Home Assistant instance not available.");
-  //     return;
-  //   }
-
-  //   // Subscribe to events from the backend
-  //   this.hass.connection.subscribeEvents(
-  //     (event) => this._handleBackendEvent(event),
-  //     "open_street_map_event" // Event type from the backend
-  //   );
-  // }
-
-  // private _handleBackendEvent(event: any) {
-  //   console.log("Received event from backend:", event);
-
-  //   if (event.data.type === "get_address_coordinates") {
-  //     const coordinates = event.data.coordinates;
-  //     console.log("Coordinates received:", coordinates);
-  //   }
-  // }
-
+  /**
+   * Opens a map layer selection dialog and changes the map layer based on the user's selection.
+   * Supports various map layers like standard, CyclOSM, cycle map, transport map, and humanitarian.
+   *
+   * @returns A promise that resolves when the layer change is completed.
+   */
   private async _changeLayer(): Promise<void> {
     const response = await showMapLayerDialog(this, {});
     if (response == null) return;
