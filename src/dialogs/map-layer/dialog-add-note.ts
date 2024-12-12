@@ -27,8 +27,6 @@ export class DialogAddNote
   public async showDialog(dialogParams: AddNoteDialogParams): Promise<void> {
     this._dialogParams = dialogParams;
     this._existingNote = dialogParams.existingNote || "";
-    const noteTest = this._existingNote;
-    console.log("existing note is this ", this._dialogParams.existingNote)
     await this.updateComplete;
   }
 
