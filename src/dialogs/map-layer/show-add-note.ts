@@ -1,6 +1,7 @@
 import { fireEvent } from "../../common/dom/fire_event";
 
 export interface AddNoteDialogParams {
+  existingNote?: string;
   submit?: (layer?: string) => void;
   cancel?: () => void;
 }
