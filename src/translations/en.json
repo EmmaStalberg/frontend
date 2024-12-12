@@ -1795,6 +1795,10 @@
         "input_from": "From",
         "input_to": "To"
       },
+      "add_note": {
+        "title": "New note",
+        "input_label": "Note"
+      },
       "matter-add-device": {
         "add_device": "Add device",
         "add_device_failed": "Failed to add the device",
