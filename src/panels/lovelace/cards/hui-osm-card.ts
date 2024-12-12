@@ -446,7 +446,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
-    // console.log("ENTER IS PRESSED");
+    console.log("ENTER IS PRESSED in handlesearch");
 
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
@@ -477,32 +477,30 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     if (!searchterm) return;
     console.log("Searching for ", searchterm);
 
-    const entityId = Object.values(this.hass.states).find(
-      (stateObj) => 
-        computeStateDomain(stateObj) === "open_street_map"
-    )?.entity_id;
+    const entityId = "osm_search_entity";
 
     // try using the separate service call requst handler 
-    try {
-      // create service request.
-      const serviceRequest: ServiceCallRequest = {
-        domain: "open_street_map",
-        service: 'get_address_coordinates',
-        serviceData: {
-          entity_id: entityId,
-          query: searchterm,
-        }
-      };
+    // try {
+    //   // create service request.
+    //   const serviceRequest: ServiceCallRequest = {
+    //     domain: "open_street_map",
+    //     service: 'get_address_coordinates',
+    //     serviceData: {
+    //       entity_id: entityId,
+    //       query: searchterm,
+    //     }
+    //   };
 
-      // call the service, and convert the response to a type.
-      const response = await this.CallServiceWithResponse(serviceRequest);
-      console.log("the coords from special call are ", response)
+    //   // call the service, and convert the response to a type.
+    //   console.log("trying to do special call...")
+    //   const response = await this.CallServiceWithResponse(serviceRequest);
+    //   console.log("the coords from special call are ", response)
 
-      // if it works, add map updates here 
+    //   // if it works, add map updates here 
 
-    } finally {
-      /** empty */
-    }
+    // } finally {
+    //   /** empty */
+    // }
 
     // const get_address_coordinates_event = (
     //   hass: HomeAssistant,
@@ -520,40 +518,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     // } finally {
     //   /** empty */
     // }
-
-    // NEW MAYBE JUST USE STATES HERE ????
-
-    // WHEN LATER WANT TO SHOW ENTIRE RESULT, USE THIS AS WELL
-    // await this.hass.callService("open_street_map", "search", {
-    //   query: searchterm,
-    // });
-
-    // ANOTHER TRY, MIGHT NOT USE
-    // this.hass.bus.on("open_street_map_event", (event) => {
-    //   const { error, results, coordinates } = event.detail;
-
-    //   if (error) {
-    //       console.error("Search Error:", error);
-    //       return;
-    //   }
-
-    //   // Center map around given coordinates retreived from search
-    //   if (coordinates) {
-    //       const [lat, lon] = coordinates;
-    //       this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
-    //       console.log("Coordinates found:", lat, lon);
-    //   }
-
-    //   // THIS IS FOR WHEN ADDING THE ENTRE RESULT,
-    //   // BUT MIGHT NEED TO BE IN ANOTHER {}
-    //   if (results) {
-    //       // Handle displaying results, for example, a list of addresses
-    //       console.log("Search results:", results);
-    //   }
-    // });
-
-    // get coordinates 
-    // let coordinates: any;
 
     try {
       const coordinates = await this.hass.callService(
