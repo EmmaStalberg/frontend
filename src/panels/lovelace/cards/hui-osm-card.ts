@@ -202,7 +202,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               id="search-bar"
               .hass=${this.hass}
               @value-changed=${this._handleSearchInputChange}
-              @keypress=${this._handleSearchPressed}
+              @keypress=${this._handleSearch}
               .label=${this.hass.localize(
                 "ui.panel.lovelace.editor.edit_card.search_cards"
               )}
