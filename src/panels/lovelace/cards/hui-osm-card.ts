@@ -14,6 +14,7 @@ import memoizeOne from "memoize-one";
 import { getColorByIndex } from "../../../common/color/colors";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import { computeDomain } from "../../../common/entity/compute_domain";
+import { computeStateDomain } from "../../../common/entity/compute_state_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import { deepEqual } from "../../../common/util/deep-equal";
 import parseAspectRatio from "../../../common/util/parse-aspect-ratio";
@@ -30,7 +31,11 @@ import type {
 } from "../../../components/map/ha-osm";
 import type { HistoryStates } from "../../../data/history";
 import { subscribeHistoryStatesTimeWindow } from "../../../data/history";
-import type { HomeAssistant } from "../../../types";
+import type {
+  HomeAssistant,
+  ServiceCallRequest,
+  ServiceCallResponse,
+} from "../../../types";
 import { findEntities } from "../common/find-entities";
 import {
   hasConfigChanged,
@@ -50,6 +55,7 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
+import { logger } from "workbox-core/_private";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 import { showConfirmationDialog } from "../custom-card-helpers";
 import { showToast } from "../../../util/toast";
@@ -94,6 +100,8 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
   @state() private _filter?: string;
+
+  @state() private _coordinates: [number, number] | null = null;
 
   public setConfig(config: MapCardConfig): void {
     if (!config) {
@@ -198,7 +206,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             id="search-bar"
             .hass=${this.hass}
             @value-changed=${this._handleSearchInputChange}
-            @keypress=${this._handleSearch}
+            @keypress=${this._handleSearchPressed}
             .label=${this.hass.localize(
               "ui.panel.lovelace.editor.edit_card.search_cards"
             )}
@@ -343,7 +351,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     }
   }
 
+  private _updateMap(coordinates: [number, number]) {
+    const [lat, lon] = coordinates;
+    console.log("Updating map with new coordinates:", lat, lon);
+    this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+  }
+
   protected updated(changedProps: PropertyValues): void {
+    super.updated(changedProps);
     if (this._configEntities?.length) {
       if (!this._subscribed || changedProps.has("_config")) {
         this._unsubscribeHistory();
@@ -384,6 +399,12 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._map?.fitMap();
   }
 
+  /**
+   * Shares the current page URL by copying it to the clipboard.
+   * Displays a confirmation dialog and attempts to copy the URL when confirmed.
+   * If successful, a toast notification is shown to inform the user.
+   * If it fails, an error is logged in the console.
+   */
   private _shareLocation() {
     const currentUrl = window.location.href; // Get the current page URL
     showConfirmationDialog(this, {
@@ -404,10 +425,58 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     });
   }
 
+  /**
+   * Handles the change of the search input value.
+   * Updates the filter value based on the event detail value.
+   *
+   * @param ev - The custom event containing the new search input value.
+   */
   private _handleSearchInputChange(ev: CustomEvent) {
     this._filter = ev.detail.value;
   }
 
+  /**
+   * Calls a service and waits for the response.
+   * Executes a script using the provided service request and returns the service response data as a string.
+   *
+   * @param serviceRequest - The service call request containing domain, service, and other parameters.
+   * @returns A promise that resolves to the service response data as a string.
+   */
+  public async CallServiceWithResponse(
+    serviceRequest: ServiceCallRequest
+  ): Promise<string> {
+    try {
+      // call the service as a script.
+      const serviceResponse =
+        await this.hass.connection.sendMessagePromise<ServiceCallResponse>({
+          type: "execute_script",
+          sequence: [
+            {
+              service: serviceRequest.domain + "." + serviceRequest.service,
+              data: serviceRequest.serviceData,
+              target: serviceRequest.target,
+              response_variable: "service_result",
+            },
+            {
+              stop: "done",
+              response_variable: "service_result",
+            },
+          ],
+        });
+      // return the service response data or an empty dictionary if no response data was generated.
+      return JSON.stringify(serviceResponse.response);
+    } finally {
+      /* empty */
+    }
+  }
+
+  /**
+   * Handles the search action when the "Enter" key is pressed.
+   * If the search term is valid, triggers a search action on the map with the given search term.
+   *
+   * @param event - The keyboard event triggered by pressing a key.
+   */
+  // With API in frontend
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
@@ -418,12 +487,19 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     await this._map?._handleSearchAction(searchterm);
   }
 
+  /**
+   * Adds a node to the map.
+   * Triggers the map's action to add a note or node.
+   */
   private _addNode() {
     this._map?._handleAddANote();
   }
 
+  /**
+   * Opens a navigation dialog to allow the user to choose a navigation action.
+   * After the user responds, the map's navigation action is triggered.
+   */
   private async _openNavigationDialog(): Promise<void> {
-    // Direction
     const response = await showMapSearchDialog(this, {});
     if (!response) return;
     await this._map?._handleNavigationAction(
@@ -433,6 +509,79 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     );
   }
 
+  /**
+   * Handles the event when the "Enter" key is pressed in the search input.
+   * If a valid search term is provided, it attempts to retrieve the coordinates for the given address using two methods:
+   * 1. A custom service call to get the coordinates.
+   * 2. A direct service call using the Home Assistant API.
+   * Updates the map with the retrieved coordinates.
+   *
+   * @param event - The keyboard event triggered by pressing a key.
+   */
+  private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
+    if (event.key !== "Enter") return;
+
+    console.log("ENTER IS PRESSED");
+    // console.log(this.hass.states["open_street_map.integration"].attributes);
+
+    const searchterm = this._filter?.trim();
+    if (!searchterm) return;
+    console.log("Searching for ", searchterm);
+
+    const entityId = Object.values(this.hass.states).find(
+      (stateObj) => computeStateDomain(stateObj) === "open_street_map"
+    )?.entity_id;
+
+    // try using the separate service call requst handler
+    try {
+      // create service request.
+      const serviceRequest: ServiceCallRequest = {
+        domain: "open_street_map",
+        service: "get_address_coordinates",
+        serviceData: {
+          entity_id: entityId,
+          query: searchterm,
+        },
+      };
+
+      // call the service, and convert the response to a type.
+      const response = await this.CallServiceWithResponse(serviceRequest);
+      console.log("the coords from special call are ", response);
+
+      // if it works, add map updates here
+    } finally {
+      /** empty */
+    }
+
+    try {
+      const coordinates = await this.hass.callService(
+        "open_street_map",
+        "get_address_coordinates",
+        {
+          // entity_id: "zone.home",
+          query: searchterm,
+        }
+      );
+
+      if (coordinates) {
+        this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
+      }
+      console.log("the response json is  ", JSON.stringify(coordinates));
+      console.log("coordinates are ", coordinates);
+      const lat = coordinates[0];
+      const lon = coordinates[1];
+      this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
+    } catch (error) {
+      console.log("Could not find coordinates", error);
+    }
+  }
+
+  /**
+   * Opens a map layer selection dialog and changes the map layer based on the user's selection.
+   * Supports various map layers like standard, CyclOSM, cycle map, transport map, and humanitarian.
+   *
+   * @returns A promise that resolves when the layer change is completed.
+   */
   private async _changeLayer(): Promise<void> {
     const response = await showMapLayerDialog(this, {});
     if (response == null) return;

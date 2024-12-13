@@ -13,10 +13,9 @@ import { haStyle } from "../../resources/styles";
 import type { HomeAssistant } from "../../types";
 
 /**
- * `OpenStreetMapPanel` is a custom web component that integrates OpenStreetMap
- * into the Home Assistant user interface.
- * It provides functionalities for viewing the map, editing zones (admin only),
- * and interacting with the map's features.
+ * Represents the OpenStreetMap panel in the Home Assistant interface.
+ * This component integrates the OpenStreetMap (OSM) service, displaying the map, and provides
+ * features like zone editing (for admins) and search functionality.
  */
 @customElement("open-street-map-panel")
 class OpenStreetMapPanel extends LitElement {
@@ -29,9 +28,11 @@ class OpenStreetMapPanel extends LitElement {
   @property({ type: Object }) public panel?: { config: object };
 
   /**
-   * Renders the OpenStreetMap panel content, including the top app bar, map, and zone editing button.
+   * Renders the OpenStreetMap panel content.
+   * This includes the top app bar with navigation and zone editing icons (for admins),
+   * and the OpenStreetMap component (`ha-osm`) for displaying the map.
    *
-   * @returns The HTML template for the panel.
+   * @returns The HTML content for the OpenStreetMap panel.
    */
   protected render() {
     return html`
@@ -60,10 +61,10 @@ class OpenStreetMapPanel extends LitElement {
   }
 
   /**
-   * Lifecycle method that is invoked before the component updates.
-   * It checks if the `hass` property has changed and stores the previous value.
+   * Lifecycle method that runs before the component updates.
+   * It checks if the Home Assistant instance (`hass`) has changed and stores the previous value.
    *
-   * @param changedProps The properties that have changed since the last update.
+   * @param changedProps The properties that have changed.
    */
   public willUpdate(changedProps: PropertyValues) {
     super.willUpdate(changedProps);
@@ -74,9 +75,10 @@ class OpenStreetMapPanel extends LitElement {
   }
 
   /**
-   * Defines the styles for the OpenStreetMap panel, including layout and component-specific styling.
+   * Defines the styles for the OpenStreetMap panel.
+   * This includes styling for the map and the top app bar, including positioning and layout of elements.
    *
-   * @returns An array of CSS styles for the component.
+   * @returns An array of CSS styles applied to the component.
    */
   static get styles(): CSSResultGroup {
     return [

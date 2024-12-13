@@ -18,20 +18,35 @@ import {
   HUMANITARIAN,
 } from "../../data/map_layer";
 
+/**
+ * A dialog component to select and apply map layers.
+ * The component allows the user to select from different map layers such as Standard, CyclOSM, CycleMap, TransportMap, and Humanitarian.
+ */
 @customElement("ha-map-layer-dialog")
 export class MapLayerDialog extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   @state() private _dialogParams?: UpdateMapLayerDialogParams;
 
+  /**
+   * Opens the dialog and passes the parameters for updating the map layer.
+   *
+   * @param dialogParams - The parameters for the dialog that include a confirm callback.
+   */
   public showDialog(dialogParams: UpdateMapLayerDialogParams): void {
     this._dialogParams = dialogParams;
   }
 
+  /**
+   * Closes the dialog and triggers the 'dialog-closed' event.
+   */
   public _dialogClosed(): void {
     this.closeDialog();
   }
 
+  /**
+   * Resets the dialog parameters and closes the dialog.
+   */
   public closeDialog(): void {
     if (!this._dialogParams) {
       return;
@@ -40,6 +55,10 @@ export class MapLayerDialog extends LitElement {
     fireEvent(this, "dialog-closed", { dialog: this.localName });
   }
 
+  /**
+   * Renders the dialog's HTML content.
+   * Displays a set of buttons for selecting the map layer.
+   */
   protected render() {
     if (!this._dialogParams) {
       return nothing;
@@ -81,31 +100,54 @@ export class MapLayerDialog extends LitElement {
     `;
   }
 
+  /**
+   * Handles the selection of the Standard map layer.
+   * Confirms the selection and closes the dialog.
+   */
   private _showStandardLayer(): void {
     this._dialogParams?.confirm?.(STANDARD);
     this.closeDialog();
   }
 
+  /**
+   * Handles the selection of the CyclOSM map layer.
+   * Confirms the selection and closes the dialog.
+   */
   private _showCyclOSMLayer(): void {
     this._dialogParams?.confirm?.(CYCLOSM);
     this.closeDialog();
   }
 
+  /**
+   * Handles the selection of the Cycle map layer.
+   * Confirms the selection and closes the dialog.
+   */
   private _showcCyclemapLayerList(): void {
     this._dialogParams?.confirm?.(CYCLEMAP);
     this.closeDialog();
   }
 
+  /**
+   * Handles the selection of the Transport map layer.
+   * Confirms the selection and closes the dialog.
+   */
   private _showTransportmapLayerList(): void {
     this._dialogParams?.confirm?.(TRANSPORTMAP);
     this.closeDialog();
   }
 
+  /**
+   * Handles the selection of the Humanitarian map layer.
+   * Confirms the selection and closes the dialog.
+   */
   private _showHumanitarianLayerList(): void {
     this._dialogParams?.confirm?.(HUMANITARIAN);
     this.closeDialog();
   }
 
+  /**
+   * Returns the styles for the dialog, including responsive behavior and appearance for buttons and the dialog itself.
+   */
   static get styles(): CSSResultGroup {
     return css`
       p {
