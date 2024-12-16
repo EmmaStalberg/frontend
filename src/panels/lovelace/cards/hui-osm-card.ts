@@ -29,7 +29,7 @@ import type {
   HaMapPaths,
 } from "../../../components/map/ha-osm";
 import type { HistoryStates } from "../../../data/history";
-import { subscribeHistoryStatesTimeWindow } from "../../../data/history";
+import { entityIdHistoryNeedsAttributes, subscribeHistoryStatesTimeWindow } from "../../../data/history";
 import type { HomeAssistant, ServiceCallRequest, ServiceCallResponse } from "../../../types";
 import { findEntities } from "../common/find-entities";
 import {
@@ -443,8 +443,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
-    console.log("ENTER IS PRESSED in handlesearch");
-
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
     await this._map?._handleSearchAction(searchterm);
@@ -464,70 +462,24 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     );
   }
 
+  // Code to use for service call about search action
   private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
-    console.log("ENTER IS PRESSED");
-    // console.log(this.hass.states["open_street_map.integration"].attributes);
-
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
-    console.log("Searching for ", searchterm);
 
     const entityId = "osm_search_entity";
-
-    // try using the separate service call requst handler 
-    // try {
-    //   // create service request.
-    //   const serviceRequest: ServiceCallRequest = {
-    //     domain: "open_street_map",
-    //     service: 'get_address_coordinates',
-    //     serviceData: {
-    //       entity_id: entityId,
-    //       query: searchterm,
-    //     }
-    //   };
-
-    //   // call the service, and convert the response to a type.
-    //   console.log("trying to do special call...")
-    //   const response = await this.CallServiceWithResponse(serviceRequest);
-    //   console.log("the coords from special call are ", response)
-
-    //   // if it works, add map updates here 
-
-    // } finally {
-    //   /** empty */
-    // }
-
-    // const get_address_coordinates_event = (
-    //   hass: HomeAssistant,
-    //   entity_id: string | undefined,
-    //   searchTerm: string
-    // ) =>
-    //   hass.callWS<void>({
-    //     type: "open_street_map/async_get_address_coordinates",
-    //     entity_id: entity_id,
-    //     query: searchTerm
-    // });
-
-    // try {
-    //   await get_address_coordinates_event(this.hass, entityId, searchterm)
-    // } finally {
-    //   /** empty */
-    // }
 
     try {
       const coordinates = await this.hass.callService(
         "open_street_map", 
         "get_address_coordinates", 
         {
-          // entity_id: "zone.home",
+          entity_id: entityId,
           query: searchterm,
         }
       );
-      // update map - center around it and add marker
-      // const lat = 57.6915335;
-      // const lon = 11.9571416;
       if (coordinates) {
         this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
       }
@@ -540,28 +492,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       showToast(this, { message: error.message });
     }
   }
-
-  // private _subscribeToEvents() {
-  //   if (!this.hass) {
-  //     console.error("Home Assistant instance not available.");
-  //     return;
-  //   }
-
-  //   // Subscribe to events from the backend
-  //   this.hass.connection.subscribeEvents(
-  //     (event) => this._handleBackendEvent(event),
-  //     "open_street_map_event" // Event type from the backend
-  //   );
-  // }
-
-  // private _handleBackendEvent(event: any) {
-  //   console.log("Received event from backend:", event);
-
-  //   if (event.data.type === "get_address_coordinates") {
-  //     const coordinates = event.data.coordinates;
-  //     console.log("Coordinates received:", coordinates);
-  //   }
-  // }
 
   private async _changeLayer(): Promise<void> {
     const response = await showMapLayerDialog(this, {});
