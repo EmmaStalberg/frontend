@@ -14,7 +14,6 @@ import memoizeOne from "memoize-one";
 import { getColorByIndex } from "../../../common/color/colors";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import { computeDomain } from "../../../common/entity/compute_domain";
-import { computeStateDomain } from "../../../common/entity/compute_state_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import { deepEqual } from "../../../common/util/deep-equal";
 import parseAspectRatio from "../../../common/util/parse-aspect-ratio";
@@ -51,7 +50,6 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-import { logger } from "workbox-core/_private";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 import { showConfirmationDialog } from "../custom-card-helpers";
 import { showToast } from "../../../util/toast";
@@ -350,7 +348,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _updateMap(coordinates: [number, number]) {
     const [lat, lon] = coordinates;
-    console.log("Updating map with new coordinates:", lat, lon);
     this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
   }
 
@@ -408,9 +405,9 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               message: "The URL has been copied to your clipboard!",
             })
           ); // Copy URL to clipboard
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error("Failed to copy URL:", error);
+        } catch (error: any) {
+          // Failed to copy URL to clipboard
+          showToast(this, { message: error.message });
         }
       },
     });
@@ -534,13 +531,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       if (coordinates) {
         this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
       }
-      console.log("the response json is  ", JSON.stringify(coordinates))
-      console.log("coordinates are ", coordinates)
+      
       const lat = coordinates[0];
       const lon = coordinates[1];
       this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
-    } catch(error) {
-      console.log("Could not find coordinates", error)
+    } catch (error: any) {
+      // Could not fetch coordinates
+      showToast(this, { message: error.message });
     }
   }
 
