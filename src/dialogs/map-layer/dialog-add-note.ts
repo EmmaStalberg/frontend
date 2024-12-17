@@ -20,10 +20,13 @@ export class DialogAddNote
 
   @state() private _dialogParams?: AddNoteDialogParams;
 
+  @state() private _existingNote?: string; 
+
   @query("#note") private _input?: HaTextField;
 
   public async showDialog(dialogParams: AddNoteDialogParams): Promise<void> {
     this._dialogParams = dialogParams;
+    this._existingNote = dialogParams.existingNote || "";
     await this.updateComplete;
   }
 
@@ -56,6 +59,7 @@ export class DialogAddNote
           class="input"
           dialogInitialFocus
           id="note"
+          .value=${this._existingNote}
           .label=${this.hass.localize("ui.dialogs.add_note.input_label")}
           type="text"
           inputmode="text"

@@ -2,7 +2,7 @@ import {
   mdiImageFilterCenterFocus,
   mdiLayersTriple,
   mdiShare,
-  mdiNearMe,
+  mdiDirections,
   mdiNotePlusOutline,
 } from "@mdi/js";
 import type { HassEntities } from "home-assistant-js-websocket";
@@ -14,7 +14,6 @@ import memoizeOne from "memoize-one";
 import { getColorByIndex } from "../../../common/color/colors";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import { computeDomain } from "../../../common/entity/compute_domain";
-import { computeStateDomain } from "../../../common/entity/compute_state_domain";
 import { computeStateName } from "../../../common/entity/compute_state_name";
 import { deepEqual } from "../../../common/util/deep-equal";
 import parseAspectRatio from "../../../common/util/parse-aspect-ratio";
@@ -55,7 +54,6 @@ import {
   STANDARD,
   TRANSPORTMAP,
 } from "../../../data/map_layer";
-import { logger } from "workbox-core/_private";
 import { showMapSearchDialog } from "../../../dialogs/map-layer/show-dialog-map-search";
 import { showConfirmationDialog } from "../custom-card-helpers";
 import { showToast } from "../../../util/toast";
@@ -203,14 +201,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
             renderPassive
           ></ha-osm>
           <search-input-outlined
-            id="search-bar"
-            .hass=${this.hass}
-            @value-changed=${this._handleSearchInputChange}
-            @keypress=${this._handleSearchPressed}
-            .label=${this.hass.localize(
-              "ui.panel.lovelace.editor.edit_card.search_cards"
-            )}
-          ></search-input-outlined>
+              id="search-bar"
+              .hass=${this.hass}
+              @value-changed=${this._handleSearchInputChange}
+              @keypress=${this._handleSearch}
+              .label=${this.hass.localize(
+                "ui.panel.lovelace.editor.edit_card.search_cards"
+              )}
+            ></search-input-outlined>  
           <ha-icon-button-group tabindex="0">
             <ha-icon-button-toggle
               .label=${this.hass.localize(
@@ -248,7 +246,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               .label=${this.hass.localize(
                 `ui.panel.lovelace.cards.map.navigation`
               )}
-              .path=${mdiNearMe}
+              .path=${mdiDirections}
               style=${isDarkMode ? "color:#ffffff" : "color:#000000"}
               @click=${this._openNavigationDialog}
             ></ha-icon-button-toggle>
@@ -353,7 +351,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _updateMap(coordinates: [number, number]) {
     const [lat, lon] = coordinates;
-    console.log("Updating map with new coordinates:", lat, lon);
     this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
   }
 
@@ -417,9 +414,9 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
               message: "The URL has been copied to your clipboard!",
             })
           ); // Copy URL to clipboard
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error("Failed to copy URL:", error);
+        } catch (error: any) {
+          // Failed to copy URL to clipboard
+          showToast(this, { message: error.message });
         }
       },
     });
@@ -480,8 +477,6 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
-    // console.log("ENTER IS PRESSED");
-
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
     await this._map?._handleSearchAction(searchterm);
@@ -521,44 +516,17 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
   private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
-    console.log("ENTER IS PRESSED");
-    // console.log(this.hass.states["open_street_map.integration"].attributes);
-
     const searchterm = this._filter?.trim();
     if (!searchterm) return;
-    console.log("Searching for ", searchterm);
 
-    const entityId = Object.values(this.hass.states).find(
-      (stateObj) => computeStateDomain(stateObj) === "open_street_map"
-    )?.entity_id;
-
-    // try using the separate service call requst handler
-    try {
-      // create service request.
-      const serviceRequest: ServiceCallRequest = {
-        domain: "open_street_map",
-        service: "get_address_coordinates",
-        serviceData: {
-          entity_id: entityId,
-          query: searchterm,
-        },
-      };
-
-      // call the service, and convert the response to a type.
-      const response = await this.CallServiceWithResponse(serviceRequest);
-      console.log("the coords from special call are ", response);
-
-      // if it works, add map updates here
-    } finally {
-      /** empty */
-    }
+    const entityId = "osm_search_entity";
 
     try {
       const coordinates = await this.hass.callService(
         "open_street_map",
         "get_address_coordinates",
         {
-          // entity_id: "zone.home",
+          entity_id: entityId,
           query: searchterm,
         }
       );
@@ -566,22 +534,16 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
       if (coordinates) {
         this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
       }
-      console.log("the response json is  ", JSON.stringify(coordinates));
-      console.log("coordinates are ", coordinates);
+      
       const lat = coordinates[0];
       const lon = coordinates[1];
-      this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
-    } catch (error) {
-      console.log("Could not find coordinates", error);
+      this._map?.fitMapToCoordinates([lat, lon], {zoom: 13}); 
+    } catch (error: any) {
+      // Could not fetch coordinates
+      showToast(this, { message: error.message });
     }
   }
 
-  /**
-   * Opens a map layer selection dialog and changes the map layer based on the user's selection.
-   * Supports various map layers like standard, CyclOSM, cycle map, transport map, and humanitarian.
-   *
-   * @returns A promise that resolves when the layer change is completed.
-   */
   private async _changeLayer(): Promise<void> {
     const response = await showMapLayerDialog(this, {});
     if (response == null) return;

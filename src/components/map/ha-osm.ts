@@ -8,7 +8,6 @@ import type {
   Polyline,
   Map,
 } from "leaflet";
-// eslint-disable-next-line import/no-duplicates
 import { TileLayer } from "leaflet";
 import type { CSSResultGroup, PropertyValues } from "lit";
 import { ReactiveElement, css } from "lit";
@@ -111,8 +110,6 @@ export class HaOSM extends ReactiveElement {
 
   private noteMarkers: L.Marker[] = [];
 
-  // Disable type checking for Map
-  // @ts-ignore
   private noteData: Map<L.Marker, string> = new Map();
 
   @state()
@@ -304,9 +301,9 @@ export class HaOSM extends ReactiveElement {
       }
       const node = data[0];
       return node;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Error fetching coordinates:", error);
+    } catch (error: any) {
+      // Error fetching coordinates 
+      showToast(this, { message: error.message });
       return null; // Return null or handle the error as needed
     }
   }
@@ -401,8 +398,7 @@ export class HaOSM extends ReactiveElement {
       // Add event listener for the "Remove Note" button
       const popupContent = noteMarker.getPopup()?.getElement();
       if (!popupContent) {
-        // eslint-disable-next-line no-console
-        console.error("Popup content not found");
+        showToast(this, { message: "Popup content not found" });
         return;
       }
       const note = this.noteData.get(noteMarker) || "No note added yet.";
@@ -420,12 +416,11 @@ export class HaOSM extends ReactiveElement {
         "#add-note"
       ) as HTMLElement;
       if (!addNoteButton) {
-        // eslint-disable-next-line no-console
-        console.error("Add note button not found in popup");
+        showToast(this, { message: "Add note button not found in popup" });
         return;
       }
       addNoteButton.addEventListener("click", async () => {
-        const response = await showAddNoteDialog(this, {});
+        const response = await showAddNoteDialog(this, {existingNote: this.noteData.get(noteMarker)});
         this.noteData.set(noteMarker, response || ""); // Update the note in the Map
         noteMarker.closePopup();
       });
@@ -434,8 +429,7 @@ export class HaOSM extends ReactiveElement {
         "#remove-note"
       ) as HTMLElement;
       if (!removeButton) {
-        // eslint-disable-next-line no-console
-        console.error("Remove button not found in popup");
+        showToast(this, { message: "Remove button not found in popup" });
         return;
       }
 
@@ -453,8 +447,6 @@ export class HaOSM extends ReactiveElement {
     // Add dragend event to update marker position
     noteMarker.on("dragend", () => {
       const { lat, lng } = noteMarker.getLatLng();
-      // eslint-disable-next-line no-console
-      console.log(`Marker moved to: ${lat}, ${lng}`);
     });
     updatePopupContent();
   }
@@ -482,8 +474,7 @@ export class HaOSM extends ReactiveElement {
     } else {
       const fetchedStart = await this._fetchAdressInfo(startPoint);
       if (!fetchedStart) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to fetch start coordinates.");
+        showToast(this, { message: "Failed to fetch start coordinates." });
         return; // Exit if start coordinates couldn't be fetched
       }
       startInfo = {
@@ -501,8 +492,7 @@ export class HaOSM extends ReactiveElement {
     } else {
       const fetchedEnd = await this._fetchAdressInfo(endPoint);
       if (!fetchedEnd) {
-        // eslint-disable-next-line no-console
-        console.error("Failed to fetch end coordinates.");
+        showToast(this, { message:"Failed to fetch end coordinates."});
         return; // Exit if end coordinates couldn't be fetched
       }
       endInfo = {
@@ -563,9 +553,8 @@ export class HaOSM extends ReactiveElement {
       this._routeLayer.on("click", (e: any) =>
         this._handleRouteClick(e.latlng)
       );
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Error fetching or displaying route:", error);
+    } catch (error: any) {
+      showToast(this, { message: error.message });
     }
   }
 
@@ -688,9 +677,8 @@ export class HaOSM extends ReactiveElement {
         latlng.lng,
       ]);
       this._addRestaurantMarkers(nearbyRestaurants);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Error fetching nearby restaurants:", error);
+    } catch (error: any) {
+      showToast(this, { message: error.message });
     }
   }
 
@@ -738,9 +726,8 @@ export class HaOSM extends ReactiveElement {
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1`;
       const details = await this.fetchApiJson(url);
       return details;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Error fetching restaurant details:", error);
+    } catch (error: any) {
+      showToast(this, { message: error.message });
       return null;
     }
   }
@@ -796,9 +783,8 @@ export class HaOSM extends ReactiveElement {
       );
       // Limit the number of restaurants to `count`
       return validRestaurants.slice(0, 6);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Error fetching restaurants:", error);
+    } catch (error: any) {
+      showToast(this, { message: error.message });
       return [];
     }
   }
