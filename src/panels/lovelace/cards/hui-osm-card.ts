@@ -29,8 +29,6 @@ import type {
   HaMapPaths,
 } from "../../../components/map/ha-osm";
 import type { HistoryStates } from "../../../data/history";
-import { entityIdHistoryNeedsAttributes, subscribeHistoryStatesTimeWindow } from "../../../data/history";
-import type { HomeAssistant, ServiceCallRequest, ServiceCallResponse } from "../../../types";
 import { subscribeHistoryStatesTimeWindow } from "../../../data/history";
 import type {
   HomeAssistant,
