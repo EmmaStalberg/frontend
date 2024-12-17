@@ -159,11 +159,11 @@ export class HaOSM extends ReactiveElement {
    */
   private async _loadMap(): Promise<void> {
     if (this._loading) return;
-    let map = this.shadowRoot!.getElementById("map");
+    let map = this.shadowRoot?.getElementById("map");
     if (!map) {
       map = document.createElement("div");
       map.id = "map";
-      this.shadowRoot!.append(map);
+      this.shadowRoot?.append(map);
     }
     this._loading = true;
     try {
@@ -186,8 +186,6 @@ export class HaOSM extends ReactiveElement {
     map.locate({ setView: true, maxZoom: 13 });
     map.on("locationfound", (e: L.LocationEvent) => {
       this._location = [Number(e.latlng.lat), Number(e.latlng.lng)];
-      // this.markers.forEach((marker) => marker.remove());
-      // this.markers = [];
       const newMarker = leaflet.marker(e.latlng).addTo(map);
       this.markers.push(newMarker);
       map.setView(e.latlng);
@@ -803,12 +801,15 @@ export class HaOSM extends ReactiveElement {
     end: [number, number],
     transportMode: string
   ) {
-    const transport_mode =
-      transportMode === "car"
-        ? "car"
-        : transportMode === "bicycle"
-          ? "bike"
-          : "foot";
+    let transport_mode;
+    if (transportMode === "car") {
+      transport_mode = "car";
+    } else if (transportMode === "bicycle") {
+      transport_mode = "bike";
+    } else {
+      transport_mode = "foot";
+    }
+
 
     const [startLat, startLon] = start;
     const [endLat, endLon] = end;
