@@ -31,6 +31,12 @@ import type {
 import type { HistoryStates } from "../../../data/history";
 import { entityIdHistoryNeedsAttributes, subscribeHistoryStatesTimeWindow } from "../../../data/history";
 import type { HomeAssistant, ServiceCallRequest, ServiceCallResponse } from "../../../types";
+import { subscribeHistoryStatesTimeWindow } from "../../../data/history";
+import type {
+  HomeAssistant,
+  ServiceCallRequest,
+  ServiceCallResponse,
+} from "../../../types";
 import { findEntities } from "../common/find-entities";
 import {
   hasConfigChanged,
@@ -93,7 +99,7 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
   private _subscribed?: Promise<(() => Promise<void>) | void>;
 
-  @state() private _filter?: string; 
+  @state() private _filter?: string;
 
   @state() private _coordinates: [number, number] | null = null;
 
@@ -345,14 +351,13 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     }
   }
 
-
   private _updateMap(coordinates: [number, number]) {
     const [lat, lon] = coordinates;
     this._map?.fitMapToCoordinates([lat, lon], { zoom: 13 });
   }
 
   protected updated(changedProps: PropertyValues): void {
-    super.updated(changedProps)
+    super.updated(changedProps);
     if (this._configEntities?.length) {
       if (!this._subscribed || changedProps.has("_config")) {
         this._unsubscribeHistory();
@@ -393,6 +398,12 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     this._map?.fitMap();
   }
 
+  /**
+   * Shares the current page URL by copying it to the clipboard.
+   * Displays a confirmation dialog and attempts to copy the URL when confirmed.
+   * If successful, a toast notification is shown to inform the user.
+   * If it fails, an error is logged in the console.
+   */
   private _shareLocation() {
     const currentUrl = window.location.href; // Get the current page URL
     showConfirmationDialog(this, {
@@ -413,32 +424,57 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     });
   }
 
+  /**
+   * Handles the change of the search input value.
+   * Updates the filter value based on the event detail value.
+   *
+   * @param ev - The custom event containing the new search input value.
+   */
   private _handleSearchInputChange(ev: CustomEvent) {
     this._filter = ev.detail.value;
   }
 
-  public async CallServiceWithResponse(serviceRequest: ServiceCallRequest): Promise<string> {
+  /**
+   * Calls a service and waits for the response.
+   * Executes a script using the provided service request and returns the service response data as a string.
+   *
+   * @param serviceRequest - The service call request containing domain, service, and other parameters.
+   * @returns A promise that resolves to the service response data as a string.
+   */
+  public async CallServiceWithResponse(
+    serviceRequest: ServiceCallRequest
+  ): Promise<string> {
     try {
       // call the service as a script.
-      const serviceResponse = await this.hass.connection.sendMessagePromise<ServiceCallResponse>({
-        type: "execute_script",
-        sequence: [{
-          "service": serviceRequest.domain + "." + serviceRequest.service,
-          "data": serviceRequest.serviceData,
-          "target": serviceRequest.target,
-          "response_variable": "service_result"
-        },
-        {
-          "stop": "done",
-          "response_variable": "service_result"
-        }]
-      });
+      const serviceResponse =
+        await this.hass.connection.sendMessagePromise<ServiceCallResponse>({
+          type: "execute_script",
+          sequence: [
+            {
+              service: serviceRequest.domain + "." + serviceRequest.service,
+              data: serviceRequest.serviceData,
+              target: serviceRequest.target,
+              response_variable: "service_result",
+            },
+            {
+              stop: "done",
+              response_variable: "service_result",
+            },
+          ],
+        });
       // return the service response data or an empty dictionary if no response data was generated.
-      return JSON.stringify(serviceResponse.response)
-
-    } finally { /* empty */ }
+      return JSON.stringify(serviceResponse.response);
+    } finally {
+      /* empty */
+    }
   }
 
+  /**
+   * Handles the search action when the "Enter" key is pressed.
+   * If the search term is valid, triggers a search action on the map with the given search term.
+   *
+   * @param event - The keyboard event triggered by pressing a key.
+   */
   // With API in frontend
   private async _handleSearch(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
@@ -448,10 +484,18 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     await this._map?._handleSearchAction(searchterm);
   }
 
+  /**
+   * Adds a node to the map.
+   * Triggers the map's action to add a note or node.
+   */
   private _addNode() {
     this._map?._handleAddANote();
   }
 
+  /**
+   * Opens a navigation dialog to allow the user to choose a navigation action.
+   * After the user responds, the map's navigation action is triggered.
+   */
   private async _openNavigationDialog(): Promise<void> {
     const response = await showMapSearchDialog(this, {});
     if (!response) return;
@@ -462,7 +506,15 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
     );
   }
 
-  // Code to use for service call about search action
+  /**
+   * Handles the event when the "Enter" key is pressed in the search input.
+   * If a valid search term is provided, it attempts to retrieve the coordinates for the given address using two methods:
+   * 1. A custom service call to get the coordinates.
+   * 2. A direct service call using the Home Assistant API.
+   * Updates the map with the retrieved coordinates.
+   *
+   * @param event - The keyboard event triggered by pressing a key.
+   */
   private async _handleSearchPressed(event: KeyboardEvent): Promise<void> {
     if (event.key !== "Enter") return;
 
@@ -473,13 +525,14 @@ class HuiOSMCard extends LitElement implements LovelaceCard {
 
     try {
       const coordinates = await this.hass.callService(
-        "open_street_map", 
-        "get_address_coordinates", 
+        "open_street_map",
+        "get_address_coordinates",
         {
           entity_id: entityId,
           query: searchterm,
         }
       );
+
       if (coordinates) {
         this._coordinates = [coordinates[0], coordinates[1]]; // Update the state with the new coordinates
       }
